@@ -1,4 +1,4 @@
-package kube
+package util
 
 import (
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -1,4 +1,4 @@
-package kube
+package util
 
 // Data structures and functions for pretty formatting resource pools, nodes, pods, machine types, etc.
 

@@ -1,4 +1,4 @@
-package kube
+package util
 
 const (
 	True = "True"

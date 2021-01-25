@@ -11,7 +11,9 @@ import (
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
-	commonUtil "github.com/Netflix/titus-resource-pool/util"
+	poolNode "github.com/Netflix/titus-resource-pool/node"
+	poolPod "github.com/Netflix/titus-resource-pool/pod"
+	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 
 // Data structure that holds resource pool CRD and nodes and pods associated with this resource pool.
@@ -59,11 +61,25 @@ func NewResourceSnapshot(client ctrlClient.Client, resourcePoolName string,
 	return &snapshot, nil
 }
 
+// New resource snapshot that is statically configured. Reloading functions when called do nothing.
+func NewStaticResourceSnapshot(resourcePool *poolV1.ResourcePoolConfig, machines []*poolV1.MachineTypeConfig,
+	nodes []*k8sCore.Node, pods []*k8sCore.Pod, nodeBootstrapThreshold time.Duration) *ResourceSnapshot {
+	snapshot := ResourceSnapshot{
+		ResourcePoolName:       resourcePool.Name,
+		ResourcePool:           resourcePool,
+		NodeBootstrapThreshold: nodeBootstrapThreshold,
+		Machines:               machines,
+	}
+	snapshot.updateNodeData(nodes)
+	snapshot.updatePodData(pods)
+	return &snapshot
+}
+
 func (snapshot *ResourceSnapshot) ActiveCapacity() poolV1.ComputeResource {
 	total := poolV1.ComputeResource{}
 	for _, node := range snapshot.Nodes {
-		if !commonUtil.IsNodeOnItsWayOut(node) {
-			total = total.Add(commonUtil.FromNodeToComputeResource(node))
+		if !poolUtil.IsNodeOnItsWayOut(node) {
+			total = total.Add(poolUtil.FromNodeToComputeResource(node))
 		}
 	}
 	return total
@@ -72,7 +88,7 @@ func (snapshot *ResourceSnapshot) ActiveCapacity() poolV1.ComputeResource {
 func (snapshot *ResourceSnapshot) ActiveNodeCount() int64 {
 	count := 0
 	for _, node := range snapshot.Nodes {
-		if !commonUtil.IsNodeOnItsWayOut(node) {
+		if !poolUtil.IsNodeOnItsWayOut(node) {
 			count = count + 1
 		}
 	}
@@ -83,8 +99,8 @@ func (snapshot *ResourceSnapshot) ActiveNodeCount() int64 {
 func (snapshot *ResourceSnapshot) OnWayOutCapacity() poolV1.ComputeResource {
 	total := poolV1.ComputeResource{}
 	for _, node := range snapshot.Nodes {
-		if commonUtil.IsNodeOnItsWayOut(node) {
-			total = total.Add(commonUtil.FromNodeToComputeResource(node))
+		if poolUtil.IsNodeOnItsWayOut(node) {
+			total = total.Add(poolUtil.FromNodeToComputeResource(node))
 		}
 	}
 	return total
@@ -93,7 +109,7 @@ func (snapshot *ResourceSnapshot) OnWayOutCapacity() poolV1.ComputeResource {
 func (snapshot *ResourceSnapshot) OnWayOutNodeCount() int64 {
 	count := 0
 	for _, node := range snapshot.Nodes {
-		if commonUtil.IsNodeOnItsWayOut(node) {
+		if poolUtil.IsNodeOnItsWayOut(node) {
 			count = count + 1
 		}
 	}
@@ -109,34 +125,39 @@ func (snapshot *ResourceSnapshot) NotProvisionedCount() int64 {
 	return snapshot.NotProvisionedCapacity().SplitByWithCeil(snapshot.ResourcePool.Spec.ResourceShape.ComputeResource)
 }
 
-func (snapshot *ResourceSnapshot) FormatResourceSnapshot(options commonUtil.FormatterOptions) string {
-	if options.Level == commonUtil.FormatCompact {
+func (snapshot *ResourceSnapshot) FormatResourceSnapshot(options poolUtil.FormatterOptions) string {
+	if options.Level == poolUtil.FormatCompact {
 		return formatResourceSnapshotCompact(snapshot)
-	} else if options.Level == commonUtil.FormatEssentials {
+	} else if options.Level == poolUtil.FormatEssentials {
 		return formatResourceSnapshotEssentials(snapshot)
-	} else if options.Level == commonUtil.FormatDetails {
+	} else if options.Level == poolUtil.FormatDetails {
 		return formatResourceSnapshotEssentials(snapshot)
 	}
 	return formatResourceSnapshotCompact(snapshot)
 }
 
-func (snapshot *ResourceSnapshot) DumpSnapshotToLog(log logr.Logger, options commonUtil.FormatterOptions,
+func (snapshot *ResourceSnapshot) DumpSnapshotToLog(log logr.Logger, options poolUtil.FormatterOptions,
 	withNodes bool, withPods bool) {
 	log.Info(fmt.Sprintf("Resource pool aggregates: %s", snapshot.FormatResourceSnapshot(options)))
-	log.Info(fmt.Sprintf("Resource pool: %s", commonUtil.FormatResourcePool(snapshot.ResourcePool, options)))
+	log.Info(fmt.Sprintf("Resource pool: %s", poolUtil.FormatResourcePool(snapshot.ResourcePool, options)))
 	if withNodes {
 		for _, node := range snapshot.Nodes {
-			log.Info(fmt.Sprintf("Node: %s", commonUtil.FormatNode(node, snapshot.NodeBootstrapThreshold, options)))
+			log.Info(fmt.Sprintf("Node: %s", poolUtil.FormatNode(node, snapshot.NodeBootstrapThreshold, options)))
 		}
 	}
 	if withPods {
 		for _, pod := range snapshot.Pods {
-			log.Info(fmt.Sprintf("Pod: %s", commonUtil.FormatPod(pod, options)))
+			log.Info(fmt.Sprintf("Pod: %s", poolUtil.FormatPod(pod, options)))
 		}
 	}
 }
 
 func (snapshot *ResourceSnapshot) AdjustResourcePoolSize(resourceCount int64) error {
+	if snapshot.client == nil {
+		snapshot.ResourcePool.Spec.ResourceCount = resourceCount
+		return nil
+	}
+
 	update := snapshot.ResourcePool.DeepCopy()
 	patch := ctrlClient.MergeFrom(update.DeepCopy())
 	update.Spec.ResourceCount = resourceCount
@@ -154,6 +175,11 @@ func (snapshot *ResourceSnapshot) UpdateNode(nodeID string, transformer func(*k8
 		return fmt.Errorf("resource pool does not include node %s", nodeID)
 	}
 
+	if snapshot.client == nil {
+		transformer(node)
+		return nil
+	}
+
 	patch := ctrlClient.MergeFrom(node.DeepCopy())
 	transformer(node)
 	if err := snapshot.client.Patch(context.TODO(), node, patch); err != nil {
@@ -163,6 +189,10 @@ func (snapshot *ResourceSnapshot) UpdateNode(nodeID string, transformer func(*k8
 }
 
 func (snapshot *ResourceSnapshot) ReloadResourcePool() error {
+	if snapshot.client == nil {
+		return nil
+	}
+
 	resourcePool := poolV1.ResourcePoolConfig{}
 	err := snapshot.client.Get(context.TODO(),
 		ctrlClient.ObjectKey{Namespace: "default", Name: snapshot.ResourcePoolName}, &resourcePool)
@@ -174,6 +204,10 @@ func (snapshot *ResourceSnapshot) ReloadResourcePool() error {
 }
 
 func (snapshot *ResourceSnapshot) ReloadMachines() error {
+	if snapshot.client == nil {
+		return nil
+	}
+
 	machineList := poolV1.MachineTypeConfigList{}
 	if err := snapshot.client.List(context.TODO(), &machineList); err != nil {
 		return errors.New("cannot read machine types")
@@ -189,45 +223,55 @@ func (snapshot *ResourceSnapshot) ReloadMachines() error {
 }
 
 func (snapshot *ResourceSnapshot) ReloadNodes() error {
+	if snapshot.client == nil {
+		return nil
+	}
+
 	nodeList := k8sCore.NodeList{}
 	if err := snapshot.client.List(context.TODO(), &nodeList); err != nil {
 		return errors.New("cannot read nodes")
 	}
+	snapshot.updateNodeData(poolNode.AsNodeReferenceList(&nodeList))
+	return nil
+}
 
+func (snapshot *ResourceSnapshot) updateNodeData(current []*k8sCore.Node) {
 	var nodes []*k8sCore.Node
 	nodesByID := map[string]*k8sCore.Node{}
-	for _, node := range nodeList.Items {
-		if commonUtil.NodeBelongsToResourcePool(&node, &snapshot.ResourcePool.Spec) {
-			tmp := node
-			nodes = append(nodes, &tmp)
-			nodesByID[node.Name] = &tmp
+	for _, node := range current {
+		if poolUtil.NodeBelongsToResourcePool(node, &snapshot.ResourcePool.Spec) {
+			nodes = append(nodes, node)
+			nodesByID[node.Name] = node
 		}
 	}
 
 	snapshot.Nodes = nodes
 	snapshot.nodesByID = nodesByID
-
-	return nil
 }
 
 func (snapshot *ResourceSnapshot) ReloadPods() error {
+	if snapshot.client == nil {
+		return nil
+	}
+
 	podList := k8sCore.PodList{}
 	if err := snapshot.client.List(context.TODO(), &podList); err != nil {
 		return errors.New("cannot read podList")
 	}
+	snapshot.updatePodData(poolPod.AsPodReferenceList(&podList))
+	return nil
+}
 
+func (snapshot *ResourceSnapshot) updatePodData(current []*k8sCore.Pod) {
 	var pods []*k8sCore.Pod
-	for _, pod := range podList.Items {
-		if commonUtil.PodBelongsToResourcePool(&pod, &snapshot.ResourcePool.Spec, snapshot.Nodes) {
-			tmp := pod
-			pods = append(pods, &tmp)
+	for _, pod := range current {
+		if poolUtil.PodBelongsToResourcePool(pod, &snapshot.ResourcePool.Spec, snapshot.Nodes) {
+			pods = append(pods, pod)
 		}
 	}
 
 	snapshot.Pods = pods
-	snapshot.PrimaryPods = commonUtil.FindPodsWithPrimaryResourcePool(snapshot.ResourcePoolName, pods)
-
-	return nil
+	snapshot.PrimaryPods = poolUtil.FindPodsWithPrimaryResourcePool(snapshot.ResourcePoolName, pods)
 }
 
 func formatResourceSnapshotCompact(snapshot *ResourceSnapshot) string {
@@ -243,7 +287,7 @@ func formatResourceSnapshotCompact(snapshot *ResourceSnapshot) string {
 		NotProvisionedNodeCount: snapshot.NotProvisionedCount(),
 		OnWayOutNodeCount:       snapshot.OnWayOutNodeCount(),
 	}
-	return commonUtil.ToJSONString(value)
+	return poolUtil.ToJSONString(value)
 }
 
 func formatResourceSnapshotEssentials(snapshot *ResourceSnapshot) string {
@@ -265,5 +309,5 @@ func formatResourceSnapshotEssentials(snapshot *ResourceSnapshot) string {
 		NotProvisionedResources: snapshot.NotProvisionedCapacity(),
 		OnWayOutResources:       snapshot.OnWayOutCapacity(),
 	}
-	return commonUtil.ToJSONString(value)
+	return poolUtil.ToJSONString(value)
 }
