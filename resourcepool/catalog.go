@@ -12,6 +12,9 @@ var (
 			ObjectMeta: metaV1.ObjectMeta{
 				Name: "emptyResourcePool",
 			},
+			Spec: poolV1.ResourcePoolSpec{
+				Name: "emptyResourcePool",
+			},
 		}
 	}
 )
