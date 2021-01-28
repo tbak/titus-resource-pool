@@ -22,7 +22,7 @@ type ResourceSnapshot struct {
 	client                 ctrlClient.Client
 	ResourcePoolName       string
 	NodeBootstrapThreshold time.Duration
-	IncludeKubletBackend   bool
+	IncludeKubeletBackend  bool
 	// State
 	ResourcePool  *poolV1.ResourcePoolConfig
 	Machines      []*poolV1.MachineTypeConfig
@@ -36,12 +36,12 @@ type ResourceSnapshot struct {
 }
 
 func NewResourceSnapshot(client ctrlClient.Client, resourcePoolName string,
-	nodeBootstrapThreshold time.Duration, includeKubletBackend bool, withPods bool) (*ResourceSnapshot, error) {
+	nodeBootstrapThreshold time.Duration, includeKubeletBackend bool, withPods bool) (*ResourceSnapshot, error) {
 	snapshot := ResourceSnapshot{
 		client:                 client,
 		ResourcePoolName:       resourcePoolName,
 		NodeBootstrapThreshold: nodeBootstrapThreshold,
-		IncludeKubletBackend:   includeKubletBackend,
+		IncludeKubeletBackend:  includeKubeletBackend,
 	}
 
 	var err error
@@ -67,12 +67,12 @@ func NewResourceSnapshot(client ctrlClient.Client, resourcePoolName string,
 // New resource snapshot that is statically configured. Reloading functions when called do nothing.
 func NewStaticResourceSnapshot(resourcePool *poolV1.ResourcePoolConfig, machines []*poolV1.MachineTypeConfig,
 	nodes []*k8sCore.Node, pods []*k8sCore.Pod, nodeBootstrapThreshold time.Duration,
-	includeKubletBackend bool) *ResourceSnapshot {
+	includeKubeletBackend bool) *ResourceSnapshot {
 	snapshot := ResourceSnapshot{
 		ResourcePoolName:       resourcePool.Name,
 		ResourcePool:           resourcePool,
 		NodeBootstrapThreshold: nodeBootstrapThreshold,
-		IncludeKubletBackend:   includeKubletBackend,
+		IncludeKubeletBackend:  includeKubeletBackend,
 		Machines:               machines,
 	}
 	snapshot.updateNodeData(nodes)
@@ -246,7 +246,7 @@ func (snapshot *ResourceSnapshot) updateNodeData(current []*k8sCore.Node) {
 	nodesByID := map[string]*k8sCore.Node{}
 	for _, node := range current {
 		if poolUtil.NodeBelongsToResourcePool(node, &snapshot.ResourcePool.Spec) {
-			if snapshot.IncludeKubletBackend || !poolNode.IsKubletNode(node) {
+			if snapshot.IncludeKubeletBackend || !poolNode.IsKubeletNode(node) {
 				nodes = append(nodes, node)
 				nodesByID[node.Name] = node
 			} else {

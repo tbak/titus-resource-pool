@@ -37,10 +37,10 @@ func UniqueNodeState(node *k8sCore.Node, now time.Time, ageThreshold time.Durati
 	return NodeStateBroken
 }
 
-// Returns true, if a node is a Kublet node
-func IsKubletNode(node *k8sCore.Node) bool {
+// Returns true, if a node is a Kubelet node
+func IsKubeletNode(node *k8sCore.Node) bool {
 	if backend, ok := poolUtil.FindLabel(node.Labels, NodeLabelBackend); ok {
-		return backend == NodeBackendKublet
+		return backend == NodeBackendKubelet
 	}
 	return false
 }

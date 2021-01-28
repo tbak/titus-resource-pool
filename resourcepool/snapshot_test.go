@@ -9,20 +9,20 @@ import (
 	"testing"
 )
 
-func TestKubletNodesAreExcluded(t *testing.T) {
+func TestKubeletNodesAreExcluded(t *testing.T) {
 	pool := EmptyResourcePool()
 	nodes := []*k8sCore.Node{
 		util.NewNode("node1", pool.Name, util.R5Metal()),
-		util.ButNodeLabel(util.NewNode("node2", pool.Name, util.R5Metal()), node.NodeLabelBackend, node.NodeBackendKublet),
+		util.ButNodeLabel(util.NewNode("node2", pool.Name, util.R5Metal()), node.NodeLabelBackend, node.NodeBackendKubelet),
 	}
 
-	// With kublet
+	// With kubelet
 	snapshot := NewStaticResourceSnapshot(pool, []*poolV1.MachineTypeConfig{}, nodes, []*k8sCore.Pod{},
 		0, true)
 	require.Equal(t, 2, len(snapshot.Nodes))
 	require.Equal(t, 0, len(snapshot.ExcludedNodes))
 
-	// Without kublet
+	// Without kubelet
 	snapshot = NewStaticResourceSnapshot(pool, []*poolV1.MachineTypeConfig{}, nodes, []*k8sCore.Pod{},
 		0, false)
 	require.Equal(t, 1, len(snapshot.Nodes))

@@ -5,7 +5,7 @@ const (
 	NodeLabelBackend = "node.titus.netflix.com/backend"
 
 	// Backends
-	NodeBackendKublet = "kubelet"
+	NodeBackendKubelet = "kubelet"
 
 	// Possible node states
 	NodeStateBootstrapping  = "bootstrapping"

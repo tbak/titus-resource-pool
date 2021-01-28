@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-func TestIsKubletNode(t *testing.T) {
-	kublet := util.ButNodeLabel(util.NewRandomNode(), NodeLabelBackend, NodeBackendKublet)
-	require.True(t, IsKubletNode(kublet))
+func TestIsKubeletNode(t *testing.T) {
+	kubelet := util.ButNodeLabel(util.NewRandomNode(), NodeLabelBackend, NodeBackendKubelet)
+	require.True(t, IsKubeletNode(kubelet))
 
-	notKublet := util.ButNodeLabel(util.NewRandomNode(), NodeLabelBackend, "TJC")
-	require.False(t, IsKubletNode(notKublet))
+	notKubelet := util.ButNodeLabel(util.NewRandomNode(), NodeLabelBackend, "TJC")
+	require.False(t, IsKubeletNode(notKubelet))
 }
