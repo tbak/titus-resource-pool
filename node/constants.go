@@ -1,6 +1,12 @@
 package node
 
 const (
+	// Labels
+	NodeLabelBackend = "node.titus.netflix.com/backend"
+
+	// Backends
+	NodeBackendKublet = "kubelet"
+
 	// Possible node states
 	NodeStateBootstrapping  = "bootstrapping"
 	NodeStateActive         = "active"

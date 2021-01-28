@@ -38,6 +38,14 @@ func ButNodeCreatedTimestamp(node *v1.Node, timestamp time.Time) *v1.Node {
 	return node
 }
 
+func ButNodeLabel(node *v1.Node, key string, value string) *v1.Node {
+	if node.Labels == nil {
+		node.Labels = map[string]string{}
+	}
+	node.Labels[key] = value
+	return node
+}
+
 func ButNodeWithTaint(node *v1.Node, taint *v1.Taint) *v1.Node {
 	node.Spec.Taints = append(node.Spec.Taints, *taint)
 	return node
