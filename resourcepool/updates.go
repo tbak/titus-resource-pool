@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+func ButResourcePoolName(pool *poolV1.ResourcePoolConfig, name string) *poolV1.ResourcePoolConfig {
+	pool.Name = name
+	pool.Spec.Name = name
+	return pool
+}
+
 func ButResourceShapeLabels(pool *poolV1.ResourcePoolConfig, pairs ...string) *poolV1.ResourcePoolConfig {
 	labels := pool.Spec.ResourceShape.Labels
 	if labels == nil {

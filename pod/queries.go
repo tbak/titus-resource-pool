@@ -1,10 +1,12 @@
 package pod
 
 import (
+	"github.com/Netflix/titus-resource-pool/util"
 	"github.com/Netflix/titus-resource-pool/util/xcollection"
 	k8sCore "k8s.io/api/core/v1"
 
 	commonNode "github.com/Netflix/titus-kube-common/node"
+	commonPod "github.com/Netflix/titus-kube-common/pod"
 )
 
 // TODO Remove when no longer in use
@@ -69,4 +71,13 @@ func IsPodOkWithMachineTypesSet(pod *k8sCore.Pod, machineTypes map[string]bool) 
 		}
 	}
 	return false
+}
+
+func FindPodCapacityGroup(pod *k8sCore.Pod) string {
+	assigned, _ := util.FindLabel(pod.Labels, commonPod.LabelKeyCapacityGroup)
+	return assigned
+}
+
+func IsPodInCapacityGroup(pod *k8sCore.Pod, capacityGroupName string) bool {
+	return FindPodCapacityGroup(pod) == capacityGroupName
 }

@@ -10,6 +10,7 @@ import (
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonNode "github.com/Netflix/titus-kube-common/node"
+	commonPod "github.com/Netflix/titus-kube-common/pod"
 )
 
 func ButPodName(pod *v1.Pod, name string) *v1.Pod {
@@ -19,6 +20,11 @@ func ButPodName(pod *v1.Pod, name string) *v1.Pod {
 
 func ButPodResourcePools(pod *v1.Pod, resourcePools ...string) *v1.Pod {
 	pod.Labels[commonNode.LabelKeyResourcePool] = strings.Join(resourcePools, ",")
+	return pod
+}
+
+func ButPodCapacityGroup(pod *v1.Pod, capacityGroup string) *v1.Pod {
+	pod.Labels[commonPod.LabelKeyCapacityGroup] = capacityGroup
 	return pod
 }
 
