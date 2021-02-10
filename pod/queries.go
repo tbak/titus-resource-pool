@@ -1,9 +1,11 @@
 package pod
 
 import (
+	v12 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	"github.com/Netflix/titus-resource-pool/util"
 	"github.com/Netflix/titus-resource-pool/util/xcollection"
 	k8sCore "k8s.io/api/core/v1"
+	"time"
 
 	commonNode "github.com/Netflix/titus-kube-common/node"
 	commonPod "github.com/Netflix/titus-kube-common/pod"
@@ -74,10 +76,97 @@ func IsPodOkWithMachineTypesSet(pod *k8sCore.Pod, machineTypes map[string]bool) 
 }
 
 func FindPodCapacityGroup(pod *k8sCore.Pod) string {
-	assigned, _ := util.FindLabel(pod.Labels, commonPod.LabelKeyCapacityGroup)
+	if assigned, ok := util.FindLabel(pod.Labels, commonPod.LabelKeyCapacityGroup); ok {
+		return assigned
+	}
+	assigned, _ := util.FindLabel(pod.Annotations, commonPod.LabelKeyCapacityGroup)
 	return assigned
 }
 
 func IsPodInCapacityGroup(pod *k8sCore.Pod, capacityGroupName string) bool {
 	return FindPodCapacityGroup(pod) == capacityGroupName
+}
+
+func IsPodWaitingToBeScheduled(pod *k8sCore.Pod) bool {
+	return pod.Spec.NodeName == "" && !IsPodFinished(pod)
+}
+
+func IsPodRunning(pod *k8sCore.Pod) bool {
+	if IsPodFinished(pod) {
+		return false
+	}
+	return pod.Spec.NodeName != ""
+}
+
+func IsPodFinished(pod *k8sCore.Pod) bool {
+	return pod.Status.Phase == k8sCore.PodSucceeded || pod.Status.Phase == k8sCore.PodFailed
+}
+
+func PodAge(pod *k8sCore.Pod, now time.Time) time.Duration {
+	return now.Sub(pod.CreationTimestamp.Time)
+}
+
+func FromPodToComputeResource(pod *k8sCore.Pod) v12.ComputeResource {
+	total := v12.ComputeResource{}
+	for _, container := range pod.Spec.Containers {
+		total = total.Add(util.FromResourceListToComputeResource(container.Resources.Requests))
+	}
+	return total
+}
+
+func PodNames(pods *[]k8sCore.Pod) []string {
+	var names []string
+	for _, node := range *pods {
+		names = append(names, node.Name)
+	}
+	return names
+}
+
+func FindNotScheduledPods(pods []*k8sCore.Pod) []*k8sCore.Pod {
+	var waiting []*k8sCore.Pod
+	for _, pod := range pods {
+		if IsPodWaitingToBeScheduled(pod) {
+			waiting = append(waiting, pod)
+		}
+	}
+	return waiting
+}
+
+// Find all unscheduled pods belonging to the given resource pool, which are not younger than a threshold.
+func FindOldNotScheduledPods(pods []*k8sCore.Pod, youngPodThreshold time.Duration, now time.Time) []*k8sCore.Pod {
+	var waiting []*k8sCore.Pod
+	for _, pod := range pods {
+		if IsPodWaitingToBeScheduled(pod) && PodAge(pod, now) >= youngPodThreshold {
+			waiting = append(waiting, pod)
+		}
+	}
+	return waiting
+}
+
+func FilterRunningPods(pods []*k8sCore.Pod) []*k8sCore.Pod {
+	var active []*k8sCore.Pod
+	for _, pod := range pods {
+		if IsPodRunning(pod) {
+			active = append(active, pod)
+		}
+	}
+	return active
+}
+
+func CountNotScheduledPods(pods []*k8sCore.Pod) int64 {
+	var count int64
+	for _, pod := range pods {
+		if IsPodWaitingToBeScheduled(pod) {
+			count = count + 1
+		}
+	}
+	return count
+}
+
+func SumPodResources(pods []*k8sCore.Pod) v12.ComputeResource {
+	var sum v12.ComputeResource
+	for _, pod := range pods {
+		sum = sum.Add(FromPodToComputeResource(pod))
+	}
+	return sum
 }

@@ -4,7 +4,6 @@ import (
 	v1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	poolPod "github.com/Netflix/titus-resource-pool/pod"
 	"github.com/Netflix/titus-resource-pool/resourcepool"
-	"github.com/Netflix/titus-resource-pool/util"
 )
 
 type Usage struct {
@@ -41,8 +40,8 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot, reserv
 func buildUsage(snapshot *resourcepool.ResourceSnapshot, reservation *v1.CapacityGroup) Usage {
 	allocated := v1.ComputeResource{}
 	for _, pod := range snapshot.Pods {
-		if poolPod.IsPodInCapacityGroup(pod, reservation.Name) && util.IsPodRunning(pod) {
-			allocated = allocated.Add(util.FromPodToComputeResource(pod))
+		if poolPod.IsPodInCapacityGroup(pod, reservation.Name) && poolPod.IsPodRunning(pod) {
+			allocated = allocated.Add(poolPod.FromPodToComputeResource(pod))
 		}
 	}
 

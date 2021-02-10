@@ -2,8 +2,10 @@ package reserved
 
 import (
 	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	"github.com/Netflix/titus-resource-pool/machine"
+	node2 "github.com/Netflix/titus-resource-pool/node"
+	"github.com/Netflix/titus-resource-pool/pod"
 	. "github.com/Netflix/titus-resource-pool/resourcepool"
-	"github.com/Netflix/titus-resource-pool/util"
 	"github.com/stretchr/testify/require"
 	k8sCore "k8s.io/api/core/v1"
 	"testing"
@@ -13,11 +15,11 @@ func TestNewCapacityReservationUsage(t *testing.T) {
 	pool := ButResourcePoolName(EmptyResourcePool(), PoolNameIntegration)
 	pool.Spec.ResourceCount = 20
 
-	node := util.NewNode("node1", PoolNameIntegration, util.R5Metal())
+	node := node2.NewNode("node1", PoolNameIntegration, machine.R5Metal())
 
-	pod1 := util.ButPodResourcePools(util.NewRandomNotScheduledPod(), PoolNameIntegration)
-	pod1 = util.ButPodCapacityGroup(pod1, "group1")
-	pod1 = util.ButPodAssignedToNode(pod1, node)
+	pod1 := pod.ButPodResourcePools(pod.NewRandomNotScheduledPod(), PoolNameIntegration)
+	pod1 = pod.ButPodCapacityGroup(pod1, "group1")
+	pod1 = pod.ButPodAssignedToNode(pod1, node)
 
 	poolSnapshot := NewStaticResourceSnapshot(pool, []*poolV1.MachineTypeConfig{}, []*k8sCore.Node{node}, []*k8sCore.Pod{pod1},
 		0, true)
@@ -32,7 +34,7 @@ func TestNewCapacityReservationUsage(t *testing.T) {
 	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups)
 	require.Len(t, usage.InCapacityGroup, 2)
 
-	expectedGroup1Allocated := util.FromPodToComputeResource(pod1)
+	expectedGroup1Allocated := pod.FromPodToComputeResource(pod1)
 	expectedGroup1Unallocated := CapacityGroupResources(capacityGroups[0]).Sub(expectedGroup1Allocated)
 	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group1"].Allocated)
 	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group1"].Unallocated)

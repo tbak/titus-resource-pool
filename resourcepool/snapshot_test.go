@@ -2,8 +2,8 @@ package resourcepool
 
 import (
 	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	"github.com/Netflix/titus-resource-pool/machine"
 	"github.com/Netflix/titus-resource-pool/node"
-	"github.com/Netflix/titus-resource-pool/util"
 	"github.com/stretchr/testify/require"
 	k8sCore "k8s.io/api/core/v1"
 	"testing"
@@ -12,8 +12,8 @@ import (
 func TestKubeletNodesAreExcluded(t *testing.T) {
 	pool := EmptyResourcePool()
 	nodes := []*k8sCore.Node{
-		util.NewNode("node1", pool.Name, util.R5Metal()),
-		util.ButNodeLabel(util.NewNode("node2", pool.Name, util.R5Metal()), node.NodeLabelBackend, node.NodeBackendKubelet),
+		node.NewNode("node1", pool.Name, machine.R5Metal()),
+		node.ButNodeLabel(node.NewNode("node2", pool.Name, machine.R5Metal()), node.NodeLabelBackend, node.NodeBackendKubelet),
 	}
 
 	// With kubelet

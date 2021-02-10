@@ -1,7 +1,7 @@
-package util
+package node
 
 import (
-	"strings"
+	"github.com/Netflix/titus-resource-pool/util"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -10,34 +10,7 @@ import (
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonNode "github.com/Netflix/titus-kube-common/node"
-	commonPod "github.com/Netflix/titus-kube-common/pod"
 )
-
-func ButPodName(pod *v1.Pod, name string) *v1.Pod {
-	pod.Name = name
-	return pod
-}
-
-func ButPodResourcePools(pod *v1.Pod, resourcePools ...string) *v1.Pod {
-	pod.Labels[commonNode.LabelKeyResourcePool] = strings.Join(resourcePools, ",")
-	return pod
-}
-
-func ButPodCapacityGroup(pod *v1.Pod, capacityGroup string) *v1.Pod {
-	pod.Labels[commonPod.LabelKeyCapacityGroup] = capacityGroup
-	return pod
-}
-
-func ButPodAssignedToNode(pod *v1.Pod, node *v1.Node) *v1.Pod {
-	pod.Spec.NodeName = node.Name
-	return pod
-}
-
-func ButPodRunningOnNode(pod *v1.Pod, node *v1.Node) *v1.Pod {
-	pod = ButPodAssignedToNode(pod, node)
-	pod.Status.Phase = v1.PodRunning
-	return pod
-}
 
 func ButNodeCreatedTimestamp(node *v1.Node, timestamp time.Time) *v1.Node {
 	node.ObjectMeta.CreationTimestamp = v12.Time{Time: timestamp}
@@ -66,7 +39,7 @@ func ButNodeScalingDown(source string, node *v1.Node) *v1.Node {
 }
 
 func ButNodeRemovable(node *v1.Node) *v1.Node {
-	node.Labels[commonNode.LabelKeyRemovable] = True
+	node.Labels[commonNode.LabelKeyRemovable] = util.True
 	return node
 }
 

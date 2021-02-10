@@ -36,7 +36,7 @@ func NewStaticCapacityGroupSnapshot(capacityGroups []*v1.CapacityGroup) *Capacit
 	return &snapshot
 }
 
-func (snapshot *CapacityGroupSnapshot) FindOwnByResourcePool(resourcePoolName string) []*v1.CapacityGroup {
+func (snapshot *CapacityGroupSnapshot) FindOwnedByResourcePool(resourcePoolName string) []*v1.CapacityGroup {
 	return snapshot.capacityGroupByResourcePool[resourcePoolName]
 }
 

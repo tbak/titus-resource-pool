@@ -15,11 +15,11 @@ func TestFindOwnByResourcePool(t *testing.T) {
 	snapshot := NewStaticCapacityGroupSnapshot([]*poolV1.CapacityGroup{group1, group2})
 	require.Equal(t, 2, len(snapshot.CapacityGroups))
 
-	integration := snapshot.FindOwnByResourcePool(resourcepool.PoolNameIntegration)
+	integration := snapshot.FindOwnedByResourcePool(resourcepool.PoolNameIntegration)
 	require.Len(t, integration, 1)
 	require.Equal(t, resourcepool.PoolNameIntegration, integration[0].Spec.ResourcePoolName)
 
-	integration2 := snapshot.FindOwnByResourcePool(resourcepool.PoolNameIntegration2)
+	integration2 := snapshot.FindOwnedByResourcePool(resourcepool.PoolNameIntegration2)
 	require.Len(t, integration2, 1)
 	require.Equal(t, resourcepool.PoolNameIntegration2, integration2[0].Spec.ResourcePoolName)
 }
