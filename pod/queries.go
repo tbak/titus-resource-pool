@@ -1,14 +1,15 @@
 package pod
 
 import (
-	v12 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
-	"github.com/Netflix/titus-resource-pool/util"
-	"github.com/Netflix/titus-resource-pool/util/xcollection"
-	k8sCore "k8s.io/api/core/v1"
 	"time"
 
+	k8sCore "k8s.io/api/core/v1"
+
+	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	commonNode "github.com/Netflix/titus-kube-common/node"
 	commonPod "github.com/Netflix/titus-kube-common/pod"
+	poolUtil "github.com/Netflix/titus-resource-pool/util"
+	"github.com/Netflix/titus-resource-pool/util/xcollection"
 )
 
 // TODO Remove when no longer in use
@@ -76,10 +77,10 @@ func IsPodOkWithMachineTypesSet(pod *k8sCore.Pod, machineTypes map[string]bool) 
 }
 
 func FindPodCapacityGroup(pod *k8sCore.Pod) string {
-	if assigned, ok := util.FindLabel(pod.Labels, commonPod.LabelKeyCapacityGroup); ok {
+	if assigned, ok := poolUtil.FindLabel(pod.Labels, commonPod.LabelKeyCapacityGroup); ok {
 		return assigned
 	}
-	assigned, _ := util.FindLabel(pod.Annotations, commonPod.LabelKeyCapacityGroup)
+	assigned, _ := poolUtil.FindLabel(pod.Annotations, commonPod.LabelKeyCapacityGroup)
 	return assigned
 }
 
@@ -102,19 +103,19 @@ func IsPodFinished(pod *k8sCore.Pod) bool {
 	return pod.Status.Phase == k8sCore.PodSucceeded || pod.Status.Phase == k8sCore.PodFailed
 }
 
-func PodAge(pod *k8sCore.Pod, now time.Time) time.Duration {
+func Age(pod *k8sCore.Pod, now time.Time) time.Duration {
 	return now.Sub(pod.CreationTimestamp.Time)
 }
 
-func FromPodToComputeResource(pod *k8sCore.Pod) v12.ComputeResource {
-	total := v12.ComputeResource{}
+func FromPodToComputeResource(pod *k8sCore.Pod) poolApi.ComputeResource {
+	total := poolApi.ComputeResource{}
 	for _, container := range pod.Spec.Containers {
-		total = total.Add(util.FromResourceListToComputeResource(container.Resources.Requests))
+		total = total.Add(poolUtil.FromResourceListToComputeResource(container.Resources.Requests))
 	}
 	return total
 }
 
-func PodNames(pods *[]k8sCore.Pod) []string {
+func Names(pods *[]k8sCore.Pod) []string {
 	var names []string
 	for _, node := range *pods {
 		names = append(names, node.Name)
@@ -136,7 +137,7 @@ func FindNotScheduledPods(pods []*k8sCore.Pod) []*k8sCore.Pod {
 func FindOldNotScheduledPods(pods []*k8sCore.Pod, youngPodThreshold time.Duration, now time.Time) []*k8sCore.Pod {
 	var waiting []*k8sCore.Pod
 	for _, pod := range pods {
-		if IsPodWaitingToBeScheduled(pod) && PodAge(pod, now) >= youngPodThreshold {
+		if IsPodWaitingToBeScheduled(pod) && Age(pod, now) >= youngPodThreshold {
 			waiting = append(waiting, pod)
 		}
 	}
@@ -163,8 +164,8 @@ func CountNotScheduledPods(pods []*k8sCore.Pod) int64 {
 	return count
 }
 
-func SumPodResources(pods []*k8sCore.Pod) v12.ComputeResource {
-	var sum v12.ComputeResource
+func SumPodResources(pods []*k8sCore.Pod) poolApi.ComputeResource {
+	var sum poolApi.ComputeResource
 	for _, pod := range pods {
 		sum = sum.Add(FromPodToComputeResource(pod))
 	}

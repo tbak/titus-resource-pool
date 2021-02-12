@@ -4,16 +4,16 @@ import (
 	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	v1 "k8s.io/api/core/v1"
 
-	. "github.com/Netflix/titus-resource-pool/util"
+	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 
-func FormatPod(pod *v1.Pod, options FormatterOptions) string {
-	if options.Level == FormatCompact {
+func FormatPod(pod *v1.Pod, options poolUtil.FormatterOptions) string {
+	if options.Level == poolUtil.FormatCompact {
 		return formatPodCompact(pod)
-	} else if options.Level == FormatEssentials {
+	} else if options.Level == poolUtil.FormatEssentials {
 		return formatPodEssentials(pod)
-	} else if options.Level == FormatDetails {
-		return ToJSONString(pod)
+	} else if options.Level == poolUtil.FormatDetails {
+		return poolUtil.ToJSONString(pod)
 	}
 	return formatPodCompact(pod)
 }
@@ -29,7 +29,7 @@ func formatPodCompact(pod *v1.Pod) string {
 		State: toPodState(pod),
 		Node:  pod.Spec.NodeName,
 	}
-	return ToJSONString(value)
+	return poolUtil.ToJSONString(value)
 }
 
 func formatPodEssentials(pod *v1.Pod) string {
@@ -45,7 +45,7 @@ func formatPodEssentials(pod *v1.Pod) string {
 		Node:             pod.Spec.NodeName,
 		ComputeResources: FromPodToComputeResource(pod),
 	}
-	return ToJSONString(value)
+	return poolUtil.ToJSONString(value)
 }
 
 func toPodState(pod *v1.Pod) string {

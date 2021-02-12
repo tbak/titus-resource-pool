@@ -2,16 +2,16 @@ package resourcepool
 
 import (
 	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
-	. "github.com/Netflix/titus-resource-pool/util"
+	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 
-func FormatResourcePool(resourcePool *poolV1.ResourcePoolConfig, options FormatterOptions) string {
-	if options.Level == FormatCompact {
+func FormatResourcePool(resourcePool *poolV1.ResourcePoolConfig, options poolUtil.FormatterOptions) string {
+	if options.Level == poolUtil.FormatCompact {
 		return formatResourcePoolCompact(resourcePool)
-	} else if options.Level == FormatEssentials {
+	} else if options.Level == poolUtil.FormatEssentials {
 		return formatResourcePoolEssentials(resourcePool)
-	} else if options.Level == FormatDetails {
-		return ToJSONString(resourcePool)
+	} else if options.Level == poolUtil.FormatDetails {
+		return poolUtil.ToJSONString(resourcePool)
 	}
 	return formatResourcePoolCompact(resourcePool)
 }
@@ -27,7 +27,7 @@ func formatResourcePoolCompact(pool *poolV1.ResourcePoolConfig) string {
 		ResourceCount:      pool.Spec.ResourceCount,
 		AutoScalingEnabled: pool.Spec.ScalingRules.AutoScalingEnabled,
 	}
-	return ToJSONString(value)
+	return poolUtil.ToJSONString(value)
 }
 
 func formatResourcePoolEssentials(pool *poolV1.ResourcePoolConfig) string {
@@ -43,5 +43,5 @@ func formatResourcePoolEssentials(pool *poolV1.ResourcePoolConfig) string {
 		ResourceShape:      pool.Spec.ResourceShape.ComputeResource,
 		AutoScalingEnabled: pool.Spec.ScalingRules.AutoScalingEnabled,
 	}
-	return ToJSONString(value)
+	return poolUtil.ToJSONString(value)
 }

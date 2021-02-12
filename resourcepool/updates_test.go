@@ -1,8 +1,9 @@
 package resourcepool
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestButResourceShapeLabels(t *testing.T) {

@@ -1,9 +1,10 @@
 package resourcepool
 
 import (
-	"github.com/Netflix/titus-resource-pool/node"
 	"testing"
 	"time"
+
+	"github.com/Netflix/titus-resource-pool/node"
 
 	"github.com/Netflix/titus-resource-pool/machine"
 	. "github.com/Netflix/titus-resource-pool/pod"

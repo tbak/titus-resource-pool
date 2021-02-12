@@ -20,7 +20,8 @@ type CapacityReservationUsage struct {
 
 // For a given resource pool and reservations compute resource utilization per reservation.
 // Only capacity groups associated with the given resource pool are considered.
-func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot, reservations []*v1.CapacityGroup) *CapacityReservationUsage {
+func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
+	reservations []*v1.CapacityGroup) *CapacityReservationUsage {
 	inCapacityGroup := map[string]Usage{}
 	reserved := Usage{}
 	for _, reservation := range reservations {

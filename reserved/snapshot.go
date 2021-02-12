@@ -12,7 +12,8 @@ type CapacityGroupSnapshot struct {
 	// User provided
 	client ctrlClient.Client
 	// Loaded
-	CapacityGroups []*v1.CapacityGroup
+	CapacityGroups       []*v1.CapacityGroup
+	CapacityGroupsByName map[string]*v1.CapacityGroup
 	// Internal
 	capacityGroupByResourcePool map[string][]*v1.CapacityGroup
 }
@@ -55,10 +56,13 @@ func (snapshot *CapacityGroupSnapshot) ReloadCapacityGroups() error {
 
 func (snapshot *CapacityGroupSnapshot) updateCapacityGroupData(capacityGroups []*v1.CapacityGroup) {
 	capacityGroupByResourcePool := map[string][]*v1.CapacityGroup{}
+	capacityGroupsByName := map[string]*v1.CapacityGroup{}
 	for _, capacityGroup := range capacityGroups {
 		capacityGroupByResourcePool[capacityGroup.Spec.ResourcePoolName] = append(
 			capacityGroupByResourcePool[capacityGroup.Spec.ResourcePoolName], capacityGroup)
+		capacityGroupsByName[capacityGroup.Name] = capacityGroup
 	}
 	snapshot.CapacityGroups = capacityGroups
+	snapshot.CapacityGroupsByName = capacityGroupsByName
 	snapshot.capacityGroupByResourcePool = capacityGroupByResourcePool
 }

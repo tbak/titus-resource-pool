@@ -5,8 +5,10 @@ import (
 
 	k8sCore "k8s.io/api/core/v1"
 
+	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	commonNode "github.com/Netflix/titus-kube-common/node"
 	commonPod "github.com/Netflix/titus-kube-common/pod"
+	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 
 func ButPodName(pod *k8sCore.Pod, name string) *k8sCore.Pod {
@@ -27,6 +29,13 @@ func ButPodAnnotation(pod *k8sCore.Pod, key string, value string) *k8sCore.Pod {
 		pod.Annotations = map[string]string{}
 	}
 	pod.Annotations[key] = value
+	return pod
+}
+
+func ButPodResources(pod *k8sCore.Pod, resource poolApi.ComputeResource) *k8sCore.Pod {
+	resourceList := poolUtil.FromComputeResourceToResourceList(resource)
+	pod.Spec.Containers[0].Resources.Requests = resourceList
+	pod.Spec.Containers[0].Resources.Limits = resourceList
 	return pod
 }
 

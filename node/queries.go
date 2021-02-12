@@ -1,13 +1,13 @@
 package node
 
 import (
-	v12 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
-	node2 "github.com/Netflix/titus-kube-common/node"
 	"sort"
 	"time"
 
 	k8sCore "k8s.io/api/core/v1"
 
+	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	commonNode "github.com/Netflix/titus-kube-common/node"
 	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 
@@ -61,7 +61,7 @@ func HasNoExecuteTaint(node *k8sCore.Node) bool {
 // regarded as new.
 func IsNodeBootstrapping(node *k8sCore.Node, now time.Time, ageThreshold time.Duration) bool {
 	// This taint explicitly tells us that the node is initializing.
-	if FindTaint(node, node2.TaintKeyInit) != nil {
+	if FindTaint(node, commonNode.TaintKeyInit) != nil {
 		return true
 	}
 
@@ -101,11 +101,11 @@ func IsNodeOnItsWayOut(node *k8sCore.Node) bool {
 }
 
 func IsNodeDecommissioned(node *k8sCore.Node) bool {
-	return FindTaint(node, node2.TaintKeyNodeDecommissioning) != nil
+	return FindTaint(node, commonNode.TaintKeyNodeDecommissioning) != nil
 }
 
 func IsNodeScalingDown(node *k8sCore.Node) bool {
-	return FindTaint(node, node2.TaintKeyNodeScalingDown) != nil
+	return FindTaint(node, commonNode.TaintKeyNodeScalingDown) != nil
 }
 
 func IsNodeToRemove(node *k8sCore.Node) bool {
@@ -113,7 +113,7 @@ func IsNodeToRemove(node *k8sCore.Node) bool {
 }
 
 func IsNodeRemovable(node *k8sCore.Node) bool {
-	_, ok := poolUtil.FindLabel(node.Labels, node2.LabelKeyRemovable)
+	_, ok := poolUtil.FindLabel(node.Labels, commonNode.LabelKeyRemovable)
 	return ok
 }
 
@@ -123,15 +123,15 @@ func IsNodeTerminated(node *k8sCore.Node) bool {
 	return false
 }
 
-func NodeAge(node *k8sCore.Node, now time.Time) time.Duration {
+func Age(node *k8sCore.Node, now time.Time) time.Duration {
 	return now.Sub(node.CreationTimestamp.Time)
 }
 
-func FromNodeToComputeResource(node *k8sCore.Node) v12.ComputeResource {
+func FromNodeToComputeResource(node *k8sCore.Node) poolApi.ComputeResource {
 	return poolUtil.FromResourceListToComputeResource(node.Status.Allocatable)
 }
 
-func NodeNames(nodes []*k8sCore.Node) []string {
+func Names(nodes []*k8sCore.Node) []string {
 	var names []string
 	for _, node := range nodes {
 		names = append(names, node.Name)
@@ -156,8 +156,8 @@ func SortNodesByAge(nodes []*k8sCore.Node) []*k8sCore.Node {
 	return nodes
 }
 
-func SumNodeResources(nodes []*k8sCore.Node) v12.ComputeResource {
-	var sum v12.ComputeResource
+func SumNodeResources(nodes []*k8sCore.Node) poolApi.ComputeResource {
+	var sum poolApi.ComputeResource
 	for _, node := range nodes {
 		sum = sum.Add(FromNodeToComputeResource(node))
 	}

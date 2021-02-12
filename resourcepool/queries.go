@@ -1,12 +1,16 @@
 package resourcepool
 
 import (
-	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
-	node2 "github.com/Netflix/titus-kube-common/node"
-	. "github.com/Netflix/titus-resource-pool/util"
-	"github.com/Netflix/titus-resource-pool/util/xstring"
-	"k8s.io/api/core/v1"
 	"strings"
+	"time"
+
+	coreV1 "k8s.io/api/core/v1"
+
+	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	commonNode "github.com/Netflix/titus-kube-common/node"
+	poolNode "github.com/Netflix/titus-resource-pool/node"
+	poolUtil "github.com/Netflix/titus-resource-pool/util"
+	"github.com/Netflix/titus-resource-pool/util/xstring"
 )
 
 // Machine types used by a resource pool or empty array if none is defined.
@@ -18,11 +22,11 @@ func GetResourcePoolMachineTypes(resourcePool *poolV1.ResourcePoolConfig) []stri
 	return xstring.SplitByCommaAndTrim(value)
 }
 
-func PodBelongsToResourcePool(pod *v1.Pod, resourcePool *poolV1.ResourcePoolSpec, nodes []*v1.Node) bool {
+func PodBelongsToResourcePool(pod *coreV1.Pod, resourcePool *poolV1.ResourcePoolSpec, nodes []*coreV1.Node) bool {
 	// Do not look at pods requesting GPU resources, but running in non-GPU resource pool.
 	if resourcePool.ResourceShape.GPU <= 0 {
 		for _, container := range pod.Spec.Containers {
-			if FromResourceListToComputeResource(container.Resources.Requests).GPU > 0 {
+			if poolUtil.FromResourceListToComputeResource(container.Resources.Requests).GPU > 0 {
 				return false
 			}
 		}
@@ -51,17 +55,17 @@ func PodBelongsToResourcePool(pod *v1.Pod, resourcePool *poolV1.ResourcePoolSpec
 	return false
 }
 
-func NodeBelongsToResourcePool(node *v1.Node, resourcePool *poolV1.ResourcePoolSpec) bool {
-	return HasLabelAndValue(node.Labels, node2.LabelKeyResourcePool, resourcePool.Name)
+func NodeBelongsToResourcePool(node *coreV1.Node, resourcePool *poolV1.ResourcePoolSpec) bool {
+	return poolUtil.HasLabelAndValue(node.Labels, commonNode.LabelKeyResourcePool, resourcePool.Name)
 }
 
 // A pod may be assigned to multiple resource pools. The first one returned is considered the primary which will
 // be scaled up if more capacity is needed.
-func FindPodAssignedResourcePools(pod *v1.Pod) ([]string, bool) {
+func FindPodAssignedResourcePools(pod *coreV1.Pod) ([]string, bool) {
 	var poolNames string
 	var ok bool
-	if poolNames, ok = FindLabel(pod.Labels, node2.LabelKeyResourcePool); !ok {
-		if poolNames, ok = FindLabel(pod.Annotations, node2.LabelKeyResourcePool); !ok {
+	if poolNames, ok = poolUtil.FindLabel(pod.Labels, commonNode.LabelKeyResourcePool); !ok {
+		if poolNames, ok = poolUtil.FindLabel(pod.Annotations, commonNode.LabelKeyResourcePool); !ok {
 			return []string{}, false
 		}
 	}
@@ -82,7 +86,7 @@ func FindPodAssignedResourcePools(pod *v1.Pod) ([]string, bool) {
 	return names, true
 }
 
-func FindPodPrimaryResourcePool(pod *v1.Pod) (string, bool) {
+func FindPodPrimaryResourcePool(pod *coreV1.Pod) (string, bool) {
 	if poolNames, ok := FindPodAssignedResourcePools(pod); ok {
 		return poolNames[0], true
 	}
@@ -90,8 +94,8 @@ func FindPodPrimaryResourcePool(pod *v1.Pod) (string, bool) {
 }
 
 // Find all pods for which the given resource pool is primary.
-func FindPodsWithPrimaryResourcePool(resourcePool string, pods []*v1.Pod) []*v1.Pod {
-	var result []*v1.Pod
+func FindPodsWithPrimaryResourcePool(resourcePool string, pods []*coreV1.Pod) []*coreV1.Pod {
+	var result []*coreV1.Pod
 	for _, pod := range pods {
 		if primary, ok := FindPodPrimaryResourcePool(pod); ok {
 			if primary == resourcePool {
@@ -106,14 +110,14 @@ func FindPodsWithPrimaryResourcePool(resourcePool string, pods []*v1.Pod) []*v1.
 // 1. find its all nodes and pods
 // 2. map pods to their nodes
 // 3. collect pods not running on any node in a separate list
-func GroupNodesAndPods(resourcePool *poolV1.ResourcePoolSpec, allPods []*v1.Pod,
-	allNodes []*v1.Node) (map[string]NodeAndPods, []*v1.Pod) {
-	var nodesAndPodsMap = map[string]NodeAndPods{}
-	var podsWithoutNode []*v1.Pod
+func GroupNodesAndPods(resourcePool *poolV1.ResourcePoolSpec, allPods []*coreV1.Pod,
+	allNodes []*coreV1.Node) (map[string]poolUtil.NodeAndPods, []*coreV1.Pod) {
+	var nodesAndPodsMap = map[string]poolUtil.NodeAndPods{}
+	var podsWithoutNode []*coreV1.Pod
 
 	for _, node := range allNodes {
 		if NodeBelongsToResourcePool(node, resourcePool) {
-			nodesAndPodsMap[node.Name] = NodeAndPods{Node: node}
+			nodesAndPodsMap[node.Name] = poolUtil.NodeAndPods{Node: node}
 		}
 	}
 	for _, pod := range allPods {
@@ -130,4 +134,21 @@ func GroupNodesAndPods(resourcePool *poolV1.ResourcePoolSpec, allPods []*v1.Pod,
 		}
 	}
 	return nodesAndPodsMap, podsWithoutNode
+}
+
+func GroupNodesByLifecycleState(nodes []*coreV1.Node, now time.Time,
+	nodeBootstrapThreshold time.Duration) ([]*coreV1.Node, []*coreV1.Node, []*coreV1.Node) {
+	comingUp := []*coreV1.Node{}
+	schedulable := []*coreV1.Node{}
+	comingDown := []*coreV1.Node{}
+	for _, node := range nodes {
+		if poolNode.IsNodeBootstrapping(node, now, nodeBootstrapThreshold) {
+			comingUp = append(comingUp, node)
+		} else if poolNode.IsNodeOnItsWayOut(node) {
+			comingDown = append(comingDown, node)
+		} else {
+			schedulable = append(schedulable, node)
+		}
+	}
+	return comingUp, schedulable, comingDown
 }

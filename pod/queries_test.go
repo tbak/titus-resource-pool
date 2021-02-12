@@ -3,9 +3,11 @@ package pod
 import (
 	"testing"
 
-	"github.com/Netflix/titus-resource-pool/util/xcollection"
 	"github.com/stretchr/testify/require"
+
 	k8sCore "k8s.io/api/core/v1"
+
+	"github.com/Netflix/titus-resource-pool/util/xcollection"
 )
 
 var machineTypes = []string{"r5.metal", "m5.metal"}
@@ -35,7 +37,8 @@ func TestFilterPodsOkWithMachineTypes(t *testing.T) {
 
 func TestIsPodOkWithMachineTypesSet(t *testing.T) {
 	require.True(t, IsPodOkWithMachineTypesSet(EmptyPod(), machineTypeSet))
-	require.True(t, IsPodOkWithMachineTypesSet(ButPodMachineRequiredAffinity(EmptyPod(), []string{"r5.metal", "c5.metal"}), machineTypeSet))
-	require.False(t, IsPodOkWithMachineTypesSet(ButPodMachineRequiredAffinity(EmptyPod(), []string{"c5.metal"}), machineTypeSet))
+	require.True(t, IsPodOkWithMachineTypesSet(
+		ButPodMachineRequiredAffinity(EmptyPod(), []string{"r5.metal", "c5.metal"}), machineTypeSet))
+	require.False(t, IsPodOkWithMachineTypesSet(
+		ButPodMachineRequiredAffinity(EmptyPod(), []string{"c5.metal"}), machineTypeSet))
 }
-

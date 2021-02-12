@@ -1,8 +1,9 @@
 package resourcepool
 
 import (
-	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	"strings"
+
+	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 )
 
 func ButResourcePoolName(pool *poolV1.ResourcePoolConfig, name string) *poolV1.ResourcePoolConfig {

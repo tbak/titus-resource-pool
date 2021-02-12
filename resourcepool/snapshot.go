@@ -29,6 +29,7 @@ type ResourceSnapshot struct {
 	Nodes         []*k8sCore.Node
 	ExcludedNodes []*k8sCore.Node
 	Pods          []*k8sCore.Pod
+	PodsByID      map[string]*k8sCore.Pod
 	// Pods with the primary resource pool being this one
 	PrimaryPods []*k8sCore.Pod
 	// Helper data structures
@@ -275,13 +276,16 @@ func (snapshot *ResourceSnapshot) ReloadPods() error {
 
 func (snapshot *ResourceSnapshot) updatePodData(current []*k8sCore.Pod) {
 	var pods []*k8sCore.Pod
+	var podsByID = make(map[string]*k8sCore.Pod)
 	for _, pod := range current {
 		if PodBelongsToResourcePool(pod, &snapshot.ResourcePool.Spec, snapshot.Nodes) {
 			pods = append(pods, pod)
+			podsByID[pod.Name] = pod
 		}
 	}
 
 	snapshot.Pods = pods
+	snapshot.PodsByID = podsByID
 	snapshot.PrimaryPods = FindPodsWithPrimaryResourcePool(snapshot.ResourcePoolName, pods)
 }
 

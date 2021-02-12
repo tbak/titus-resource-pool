@@ -1,21 +1,22 @@
 package node
 
 import (
-	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
 
-	. "github.com/Netflix/titus-resource-pool/util"
+	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+
+	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 
-func FormatNode(node *v1.Node, ageThreshold time.Duration, options FormatterOptions) string {
-	if options.Level == FormatCompact {
+func FormatNode(node *v1.Node, ageThreshold time.Duration, options poolUtil.FormatterOptions) string {
+	if options.Level == poolUtil.FormatCompact {
 		return formatNodeCompact(node, ageThreshold)
-	} else if options.Level == FormatEssentials {
+	} else if options.Level == poolUtil.FormatEssentials {
 		return formatNodeEssentials(node, ageThreshold)
-	} else if options.Level == FormatDetails {
-		return ToJSONString(node)
+	} else if options.Level == poolUtil.FormatDetails {
+		return poolUtil.ToJSONString(node)
 	}
 	return formatNodeCompact(node, ageThreshold)
 }
@@ -31,7 +32,7 @@ func formatNodeCompact(node *v1.Node, ageThreshold time.Duration) string {
 		Up:       IsNodeAvailableForScheduling(node, time.Now(), ageThreshold),
 		OnWayOut: IsNodeOnItsWayOut(node),
 	}
-	return ToJSONString(value)
+	return poolUtil.ToJSONString(value)
 }
 
 func formatNodeEssentials(node *v1.Node, ageThreshold time.Duration) string {
@@ -47,5 +48,5 @@ func formatNodeEssentials(node *v1.Node, ageThreshold time.Duration) string {
 		OnWayOut:           IsNodeOnItsWayOut(node),
 		AvailableResources: FromNodeToComputeResource(node),
 	}
-	return ToJSONString(value)
+	return poolUtil.ToJSONString(value)
 }

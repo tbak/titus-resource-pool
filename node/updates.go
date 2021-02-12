@@ -1,19 +1,17 @@
 package node
 
 import (
-	"github.com/Netflix/titus-resource-pool/util"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonNode "github.com/Netflix/titus-kube-common/node"
+	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 
 func ButNodeCreatedTimestamp(node *v1.Node, timestamp time.Time) *v1.Node {
-	node.ObjectMeta.CreationTimestamp = v12.Time{Time: timestamp}
+	node.ObjectMeta.CreationTimestamp = metaV1.Time{Time: timestamp}
 	return node
 }
 
@@ -39,7 +37,7 @@ func ButNodeScalingDown(source string, node *v1.Node) *v1.Node {
 }
 
 func ButNodeRemovable(node *v1.Node) *v1.Node {
-	node.Labels[commonNode.LabelKeyRemovable] = util.True
+	node.Labels[commonNode.LabelKeyRemovable] = poolUtil.True
 	return node
 }
 
@@ -48,7 +46,7 @@ func NewDecommissioningTaint(source string, now time.Time) *v1.Taint {
 		Key:       commonNode.TaintKeyNodeDecommissioning,
 		Value:     source,
 		Effect:    "NoExecute",
-		TimeAdded: &metav1.Time{Time: now},
+		TimeAdded: &metaV1.Time{Time: now},
 	}
 }
 
@@ -57,7 +55,7 @@ func NewScalingDownTaintWithValue(now time.Time, value string) *v1.Taint {
 		Key:       commonNode.TaintKeyNodeScalingDown,
 		Value:     value,
 		Effect:    "NoExecute",
-		TimeAdded: &v12.Time{Time: now},
+		TimeAdded: &metaV1.Time{Time: now},
 	}
 }
 

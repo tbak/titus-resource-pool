@@ -4,8 +4,9 @@ import (
 	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	"github.com/Netflix/titus-resource-pool/resourcepool"
 
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestFindOwnByResourcePool(t *testing.T) {
