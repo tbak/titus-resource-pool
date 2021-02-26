@@ -10,6 +10,7 @@ import (
 	k8sCore "k8s.io/api/core/v1"
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	machineTypeV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
 	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	poolNode "github.com/Netflix/titus-resource-pool/node"
 	poolPod "github.com/Netflix/titus-resource-pool/pod"
@@ -25,7 +26,7 @@ type ResourceSnapshot struct {
 	IncludeKubeletBackend  bool
 	// State
 	ResourcePool  *poolV1.ResourcePoolConfig
-	Machines      []*poolV1.MachineTypeConfig
+	Machines      []*machineTypeV1.MachineTypeConfig
 	Nodes         []*k8sCore.Node
 	ExcludedNodes []*k8sCore.Node
 	Pods          []*k8sCore.Pod
@@ -66,7 +67,7 @@ func NewResourceSnapshot(client ctrlClient.Client, resourcePoolName string,
 }
 
 // New resource snapshot that is statically configured. Reloading functions when called do nothing.
-func NewStaticResourceSnapshot(resourcePool *poolV1.ResourcePoolConfig, machines []*poolV1.MachineTypeConfig,
+func NewStaticResourceSnapshot(resourcePool *poolV1.ResourcePoolConfig, machines []*machineTypeV1.MachineTypeConfig,
 	nodes []*k8sCore.Node, pods []*k8sCore.Pod, nodeBootstrapThreshold time.Duration,
 	includeKubeletBackend bool) *ResourceSnapshot {
 	snapshot := ResourceSnapshot{
@@ -214,12 +215,12 @@ func (snapshot *ResourceSnapshot) ReloadMachines() error {
 		return nil
 	}
 
-	machineList := poolV1.MachineTypeConfigList{}
+	machineList := machineTypeV1.MachineTypeConfigList{}
 	if err := snapshot.client.List(context.TODO(), &machineList); err != nil {
 		return errors.New("cannot read machine types")
 	}
 
-	var machines []*poolV1.MachineTypeConfig
+	var machines []*machineTypeV1.MachineTypeConfig
 	for _, machine := range machineList.Items {
 		tmp := machine
 		machines = append(machines, &tmp)

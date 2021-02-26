@@ -1,22 +1,24 @@
 package resourcepool
 
 import (
-	v1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	machineTypeV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
+	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 )
 
-func NewResourcePoolCrdOf(name string, shapeDimensions v1.ComputeResource, shapeCount int64) *v1.ResourcePoolConfig {
-	return &v1.ResourcePoolConfig{
-		ObjectMeta: v12.ObjectMeta{
+func NewResourcePoolCrdOf(name string, shapeDimensions poolV1.ComputeResource, shapeCount int64) *poolV1.ResourcePoolConfig {
+	return &poolV1.ResourcePoolConfig{
+		ObjectMeta: metaV1.ObjectMeta{
 			Name:      name,
 			Namespace: "default",
 		},
-		Spec: v1.ResourcePoolSpec{
+		Spec: poolV1.ResourcePoolSpec{
 			Name: name,
-			ResourceShape: v1.ResourceShape{
+			ResourceShape: poolV1.ResourceShape{
 				ComputeResource: shapeDimensions,
 			},
-			ScalingRules: v1.ResourcePoolScalingRules{
+			ScalingRules: poolV1.ResourcePoolScalingRules{
 				MinIdle:            0,
 				MaxIdle:            2,
 				MinSize:            0,
@@ -24,13 +26,13 @@ func NewResourcePoolCrdOf(name string, shapeDimensions v1.ComputeResource, shape
 				AutoScalingEnabled: true,
 			},
 			ResourceCount: shapeCount,
-			Status:        v1.ResourceDemandStatus{},
+			Status:        poolV1.ResourceDemandStatus{},
 		},
 	}
 }
 
-func NewResourcePoolCrdOfMachine(name string, machineTypeConfig *v1.MachineTypeConfig, partsCount int64,
-	shapeCount int64) *v1.ResourcePoolConfig {
+func NewResourcePoolCrdOfMachine(name string, machineTypeConfig *machineTypeV1.MachineTypeConfig, partsCount int64,
+	shapeCount int64) *poolV1.ResourcePoolConfig {
 	shapeDimensions := machineTypeConfig.Spec.ComputeResource.Divide(partsCount)
 	return NewResourcePoolCrdOf(name, shapeDimensions, shapeCount)
 }

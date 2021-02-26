@@ -1,14 +1,15 @@
 package reserved
 
 import (
-	v1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	capacityGroupV1 "github.com/Netflix/titus-controllers-api/api/capacitygroup/v1"
+	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	poolPod "github.com/Netflix/titus-resource-pool/pod"
 	"github.com/Netflix/titus-resource-pool/resourcepool"
 )
 
 type Usage struct {
-	Allocated   v1.ComputeResource
-	Unallocated v1.ComputeResource
+	Allocated   poolV1.ComputeResource
+	Unallocated poolV1.ComputeResource
 }
 
 type CapacityReservationUsage struct {
@@ -21,7 +22,7 @@ type CapacityReservationUsage struct {
 // For a given resource pool and reservations compute resource utilization per reservation.
 // Only capacity groups associated with the given resource pool are considered.
 func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
-	reservations []*v1.CapacityGroup) *CapacityReservationUsage {
+	reservations []*capacityGroupV1.CapacityGroup) *CapacityReservationUsage {
 	inCapacityGroup := map[string]Usage{}
 	reserved := Usage{}
 	for _, reservation := range reservations {
@@ -38,8 +39,8 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 	}
 }
 
-func buildUsage(snapshot *resourcepool.ResourceSnapshot, reservation *v1.CapacityGroup) Usage {
-	allocated := v1.ComputeResource{}
+func buildUsage(snapshot *resourcepool.ResourceSnapshot, reservation *capacityGroupV1.CapacityGroup) Usage {
+	allocated := poolV1.ComputeResource{}
 	for _, pod := range snapshot.Pods {
 		if poolPod.IsPodInCapacityGroup(pod, reservation.Name) && poolPod.IsPodRunning(pod) {
 			allocated = allocated.Add(poolPod.FromPodToComputeResource(pod))

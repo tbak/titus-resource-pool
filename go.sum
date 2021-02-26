@@ -29,8 +29,8 @@ github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF0
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/Netflix/titus-controllers-api v0.0.6 h1:TPhmGtK5ApINBOH4Yzwnpogu50tYDdoTzYNaaleGO2I=
 github.com/Netflix/titus-controllers-api v0.0.6/go.mod h1:tPzu+DV20a0usx4QPplTvSeg0ERTIyxWa1iemWsWCbI=
-github.com/Netflix/titus-controllers-api v0.0.9 h1:J5xoyezDhAd4mRYKs5s8O97qVLF7UZZ/5tAo+dvy6ZQ=
-github.com/Netflix/titus-controllers-api v0.0.9/go.mod h1:tPzu+DV20a0usx4QPplTvSeg0ERTIyxWa1iemWsWCbI=
+github.com/Netflix/titus-controllers-api v0.0.10 h1:TPSYwC3DNHdbESskml18rUUvtWNXM8v/ET4qMimFA7I=
+github.com/Netflix/titus-controllers-api v0.0.10/go.mod h1:tPzu+DV20a0usx4QPplTvSeg0ERTIyxWa1iemWsWCbI=
 github.com/Netflix/titus-kube-common v0.10.0 h1:pXxxJPCqeiiOu+FkQWvGl8ONVhQLz61RoWS9WVJnOoU=
 github.com/Netflix/titus-kube-common v0.10.0/go.mod h1:83ybr00cRJv6sIc+K3tfP/US7v/4NoMgJTahJL/qfXE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=

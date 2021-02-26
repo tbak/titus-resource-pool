@@ -1,11 +1,12 @@
 package reserved
 
 import (
-	v1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	capacityGroupV1 "github.com/Netflix/titus-controllers-api/api/capacitygroup/v1"
+	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 )
 
-func AsCapacityGroupReferenceList(capacityGroupList *v1.CapacityGroupList) []*v1.CapacityGroup {
-	result := []*v1.CapacityGroup{}
+func AsCapacityGroupReferenceList(capacityGroupList *capacityGroupV1.CapacityGroupList) []*capacityGroupV1.CapacityGroup {
+	result := []*capacityGroupV1.CapacityGroup{}
 	for _, node := range capacityGroupList.Items {
 		tmp := node
 		result = append(result, &tmp)
@@ -13,6 +14,6 @@ func AsCapacityGroupReferenceList(capacityGroupList *v1.CapacityGroupList) []*v1
 	return result
 }
 
-func CapacityGroupResources(c *v1.CapacityGroup) v1.ComputeResource {
+func CapacityGroupResources(c *capacityGroupV1.CapacityGroup) poolV1.ComputeResource {
 	return c.Spec.ComputeResource.Multiply(int64(c.Spec.InstanceCount))
 }

@@ -1,13 +1,14 @@
 package resourcepool
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 
-	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	k8sCore "k8s.io/api/core/v1"
+
+	machineTypeV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
 	"github.com/Netflix/titus-resource-pool/machine"
 	"github.com/Netflix/titus-resource-pool/node"
-	"github.com/stretchr/testify/require"
-	k8sCore "k8s.io/api/core/v1"
 )
 
 func TestKubeletNodesAreExcluded(t *testing.T) {
@@ -19,13 +20,13 @@ func TestKubeletNodesAreExcluded(t *testing.T) {
 	}
 
 	// With kubelet
-	snapshot := NewStaticResourceSnapshot(pool, []*poolV1.MachineTypeConfig{}, nodes, []*k8sCore.Pod{},
+	snapshot := NewStaticResourceSnapshot(pool, []*machineTypeV1.MachineTypeConfig{}, nodes, []*k8sCore.Pod{},
 		0, true)
 	require.Equal(t, 2, len(snapshot.Nodes))
 	require.Equal(t, 0, len(snapshot.ExcludedNodes))
 
 	// Without kubelet
-	snapshot = NewStaticResourceSnapshot(pool, []*poolV1.MachineTypeConfig{}, nodes, []*k8sCore.Pod{},
+	snapshot = NewStaticResourceSnapshot(pool, []*machineTypeV1.MachineTypeConfig{}, nodes, []*k8sCore.Pod{},
 		0, false)
 	require.Equal(t, 1, len(snapshot.Nodes))
 	require.Equal(t, 1, len(snapshot.ExcludedNodes))

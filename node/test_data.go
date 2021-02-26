@@ -12,7 +12,7 @@ import (
 	"github.com/Netflix/titus-resource-pool/machine"
 	"github.com/Netflix/titus-resource-pool/util"
 
-	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	machineTypeV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 	ResourcePoolElastic = "elastic"
 )
 
-func NewNode(name string, resourcePoolName string, machineTypeConfig *poolApi.MachineTypeConfig) *coreV1.Node {
+func NewNode(name string, resourcePoolName string, machineTypeConfig *machineTypeV1.MachineTypeConfig) *coreV1.Node {
 	return &coreV1.Node{
 		ObjectMeta: metaV1.ObjectMeta{
 			Name:      name,
@@ -45,7 +45,7 @@ func NewRandomNode(transformers ...func(node *coreV1.Node)) *coreV1.Node {
 }
 
 func NewNodes(count int64, namePrefix string, resourcePoolName string,
-	machineTypeConfig *poolApi.MachineTypeConfig) []*coreV1.Node {
+	machineTypeConfig *machineTypeV1.MachineTypeConfig) []*coreV1.Node {
 	var nodes []*coreV1.Node
 	for i := int64(0); i < count; i++ {
 		nodes = append(nodes, NewNode(fmt.Sprintf("%v-%v", namePrefix, i), resourcePoolName,

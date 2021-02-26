@@ -1,33 +1,35 @@
 package reserved
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 
-	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	k8sCore "k8s.io/api/core/v1"
+
+	capacityGroupV1 "github.com/Netflix/titus-controllers-api/api/capacitygroup/v1"
+	machineTypeV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
 	"github.com/Netflix/titus-resource-pool/machine"
-	node2 "github.com/Netflix/titus-resource-pool/node"
+	poolNode "github.com/Netflix/titus-resource-pool/node"
 	"github.com/Netflix/titus-resource-pool/pod"
 	"github.com/Netflix/titus-resource-pool/resourcepool"
-	"github.com/stretchr/testify/require"
-	k8sCore "k8s.io/api/core/v1"
 )
 
 func TestNewCapacityReservationUsage(t *testing.T) {
 	pool := resourcepool.ButResourcePoolName(resourcepool.EmptyResourcePool(), resourcepool.PoolNameIntegration)
 	pool.Spec.ResourceCount = 20
 
-	node := node2.NewNode("node1", resourcepool.PoolNameIntegration, machine.R5Metal())
+	node := poolNode.NewNode("node1", resourcepool.PoolNameIntegration, machine.R5Metal())
 
 	pod1 := pod.ButPodResourcePools(pod.NewRandomNotScheduledPod(), resourcepool.PoolNameIntegration)
 	pod1 = pod.ButPodCapacityGroup(pod1, "group1")
 	pod1 = pod.ButPodAssignedToNode(pod1, node)
 
-	poolSnapshot := resourcepool.NewStaticResourceSnapshot(pool, []*poolV1.MachineTypeConfig{}, []*k8sCore.Node{node},
+	poolSnapshot := resourcepool.NewStaticResourceSnapshot(pool, []*machineTypeV1.MachineTypeConfig{}, []*k8sCore.Node{node},
 		[]*k8sCore.Pod{pod1}, 0, true)
 
 	group1 := NewCapacityGroup("group1", resourcepool.PoolNameIntegration)
 	group1.Spec.InstanceCount = 10
-	capacityGroups := []*poolV1.CapacityGroup{
+	capacityGroups := []*capacityGroupV1.CapacityGroup{
 		group1,
 		NewCapacityGroup("group2", resourcepool.PoolNameIntegration),
 	}

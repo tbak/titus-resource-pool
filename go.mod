@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/Netflix/titus-controllers-api v0.0.9
+	github.com/Netflix/titus-controllers-api v0.0.10
 	github.com/Netflix/titus-kube-common v0.10.0
 	github.com/go-logr/logr v0.1.0
 	github.com/google/uuid v1.1.1
