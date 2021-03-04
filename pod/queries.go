@@ -1,6 +1,7 @@
 package pod
 
 import (
+	"strings"
 	"time"
 
 	k8sCore "k8s.io/api/core/v1"
@@ -77,11 +78,12 @@ func IsPodOkWithMachineTypesSet(pod *k8sCore.Pod, machineTypes map[string]bool) 
 }
 
 func FindPodCapacityGroup(pod *k8sCore.Pod) string {
-	if assigned, ok := poolUtil.FindLabel(pod.Labels, commonPod.LabelKeyCapacityGroup); ok {
-		return assigned
+	var assigned string
+	var ok bool
+	if assigned, ok = poolUtil.FindLabel(pod.Labels, commonPod.LabelKeyCapacityGroup); !ok {
+		assigned, _ = poolUtil.FindLabel(pod.Annotations, commonPod.LabelKeyCapacityGroup)
 	}
-	assigned, _ := poolUtil.FindLabel(pod.Annotations, commonPod.LabelKeyCapacityGroup)
-	return assigned
+	return strings.ReplaceAll(assigned, "_", "-")
 }
 
 func IsPodInCapacityGroup(pod *k8sCore.Pod, capacityGroupName string) bool {

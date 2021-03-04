@@ -21,13 +21,15 @@ func TestNewCapacityReservationUsage(t *testing.T) {
 	node := poolNode.NewNode("node1", resourcepool.PoolNameIntegration, machine.R5Metal())
 
 	pod1 := pod.ButPodResourcePools(pod.NewRandomNotScheduledPod(), resourcepool.PoolNameIntegration)
-	pod1 = pod.ButPodCapacityGroup(pod1, "group1")
+	// '_' chars in the capacity-group pod label/annotation value will be converted to '-' to
+	// find the pod's correponding Capacity Group CRD in kube
+	pod1 = pod.ButPodCapacityGroup(pod1, "group_1")
 	pod1 = pod.ButPodAssignedToNode(pod1, node)
 
 	poolSnapshot := resourcepool.NewStaticResourceSnapshot(pool, []*machineTypeV1.MachineTypeConfig{}, []*k8sCore.Node{node},
 		[]*k8sCore.Pod{pod1}, 0, true)
 
-	group1 := NewCapacityGroup("group1", resourcepool.PoolNameIntegration)
+	group1 := NewCapacityGroup("group-1", resourcepool.PoolNameIntegration)
 	group1.Spec.InstanceCount = 10
 	capacityGroups := []*capacityGroupV1.CapacityGroup{
 		group1,
@@ -39,8 +41,8 @@ func TestNewCapacityReservationUsage(t *testing.T) {
 
 	expectedGroup1Allocated := pod.FromPodToComputeResource(pod1)
 	expectedGroup1Unallocated := CapacityGroupResources(capacityGroups[0]).Sub(expectedGroup1Allocated)
-	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group1"].Allocated)
-	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group1"].Unallocated)
+	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group-1"].Allocated)
+	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group-1"].Unallocated)
 	require.Equal(t, expectedGroup1Allocated, usage.AllReserved.Allocated)
 	require.Equal(t, expectedGroup1Unallocated.Add(CapacityGroupResources(capacityGroups[1])),
 		usage.AllReserved.Unallocated)
