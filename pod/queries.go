@@ -1,6 +1,7 @@
 package pod
 
 import (
+	"strings"
 	"time"
 
 	k8sCore "k8s.io/api/core/v1"
@@ -85,7 +86,8 @@ func FindPodCapacityGroup(pod *k8sCore.Pod) string {
 }
 
 func IsPodInCapacityGroup(pod *k8sCore.Pod, capacityGroupName string) bool {
-	return FindPodCapacityGroup(pod) == capacityGroupName
+	podCapacityGroup := FindPodCapacityGroup(pod)
+	return podCapacityGroup == capacityGroupName || strings.ReplaceAll(podCapacityGroup, "_", "-") == capacityGroupName
 }
 
 func IsPodWaitingToBeScheduled(pod *k8sCore.Pod) bool {
