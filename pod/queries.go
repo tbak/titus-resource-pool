@@ -87,7 +87,7 @@ func FindPodCapacityGroup(pod *k8sCore.Pod) string {
 
 func IsPodInCapacityGroup(pod *k8sCore.Pod, capacityGroupName string) bool {
 	podCapacityGroup := FindPodCapacityGroup(pod)
-	return podCapacityGroup == capacityGroupName || strings.ReplaceAll(podCapacityGroup, "_", "-") == capacityGroupName
+	return strings.ReplaceAll(podCapacityGroup, "_", "-") == capacityGroupName
 }
 
 func IsPodWaitingToBeScheduled(pod *k8sCore.Pod) bool {
