@@ -1,8 +1,6 @@
 package resourcepool
 
 import (
-	"time"
-
 	v1 "k8s.io/api/core/v1"
 
 	scaler "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
@@ -11,18 +9,16 @@ import (
 	poolPod "github.com/Netflix/titus-resource-pool/pod"
 )
 
-func ComputeAllocatableCapacityFromSnapshot(snapshot *ResourceSnapshot, now time.Time,
-	nodeBootstrapThreshold time.Duration, minimumResources scaler.ComputeResource) scaler.ComputeResource {
-	_, schedulableNodes, _ := GroupNodesByLifecycleState(snapshot.Nodes, now, nodeBootstrapThreshold)
-	runningPods := poolPod.FilterRunningPods(snapshot.Pods)
-	return ComputeAllocatableCapacity(runningPods, schedulableNodes, minimumResources)
+func ComputeAllocatableCapacityFromSnapshot(snapshot *ResourceSnapshot,
+	minimumResources scaler.ComputeResource) scaler.ComputeResource {
+	scheduledPods := snapshot.PodSnapshot.ScheduledByName
+	return ComputeAllocatableCapacity(scheduledPods, snapshot.NodeSnapshot.ActiveByName, minimumResources)
 }
 
 // In order to compute allocatable capacity and be robust to the opportunistic-cpu-driven oversubscription case,
 // we cannot work in aggregate and subtract total allocated capacity from total provisioned capacity.
 // We need to do the accounting per node, and then sum.
-func ComputeAllocatableCapacity(runningPods []*v1.Pod, nodes []*v1.Node,
-	minimumResources scaler.ComputeResource) scaler.ComputeResource {
+func ComputeAllocatableCapacity(scheduledPods map[string]*v1.Pod, nodes map[string]*v1.Node, minimumResources scaler.ComputeResource) scaler.ComputeResource {
 	nodeToAvailable := make(map[string]scaler.ComputeResource)
 	nodeToUsed := make(map[string]scaler.ComputeResource)
 
@@ -33,7 +29,7 @@ func ComputeAllocatableCapacity(runningPods []*v1.Pod, nodes []*v1.Node,
 	}
 
 	// Used capacity per node. We only look at pods running on the active nodes.
-	for _, pod := range runningPods {
+	for _, pod := range scheduledPods {
 		nodeName := pod.Spec.NodeName
 		if nodeUsed, exists := nodeToUsed[nodeName]; exists {
 			nodeToUsed[nodeName] = nodeUsed.Add(poolPod.FromPodToComputeResource(pod))

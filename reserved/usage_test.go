@@ -27,7 +27,7 @@ func TestNewCapacityReservationUsage(t *testing.T) {
 	pod1 = pod.ButPodAssignedToNode(pod1, node)
 
 	poolSnapshot := resourcepool.NewStaticResourceSnapshot(pool, []*machineTypeV1.MachineTypeConfig{}, []*k8sCore.Node{node},
-		[]*k8sCore.Pod{pod1}, 0, true)
+		[]*k8sCore.Pod{pod1}, 0, 0, true)
 
 	group1 := NewCapacityGroup("group-1", resourcepool.PoolNameIntegration)
 	group1.Spec.InstanceCount = 10

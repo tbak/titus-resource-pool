@@ -21,13 +21,13 @@ func TestKubeletNodesAreExcluded(t *testing.T) {
 
 	// With kubelet
 	snapshot := NewStaticResourceSnapshot(pool, []*machineTypeV1.MachineTypeConfig{}, nodes, []*k8sCore.Pod{},
-		0, true)
-	require.Equal(t, 2, len(snapshot.Nodes))
-	require.Equal(t, 0, len(snapshot.ExcludedNodes))
+		0, 0, true)
+	require.Equal(t, 2, len(snapshot.NodeSnapshot.AllByName))
+	require.Equal(t, 0, len(snapshot.NodeSnapshot.ExcludedByName))
 
 	// Without kubelet
 	snapshot = NewStaticResourceSnapshot(pool, []*machineTypeV1.MachineTypeConfig{}, nodes, []*k8sCore.Pod{},
-		0, false)
-	require.Equal(t, 1, len(snapshot.Nodes))
-	require.Equal(t, 1, len(snapshot.ExcludedNodes))
+		0, 0, false)
+	require.Equal(t, 1, len(snapshot.NodeSnapshot.AllByName))
+	require.Equal(t, 1, len(snapshot.NodeSnapshot.ExcludedByName))
 }

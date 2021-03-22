@@ -7,6 +7,8 @@ import (
 
 	k8sCore "k8s.io/api/core/v1"
 
+	"github.com/Netflix/titus-resource-pool/machine"
+	"github.com/Netflix/titus-resource-pool/node"
 	"github.com/Netflix/titus-resource-pool/util/xcollection"
 )
 
@@ -41,4 +43,27 @@ func TestIsPodOkWithMachineTypesSet(t *testing.T) {
 		ButPodMachineRequiredAffinity(EmptyPod(), []string{"r5.metal", "c5.metal"}), machineTypeSet))
 	require.False(t, IsPodOkWithMachineTypesSet(
 		ButPodMachineRequiredAffinity(EmptyPod(), []string{"c5.metal"}), machineTypeSet))
+}
+
+func TestNotScheduledPodBelongsToResourcePool(t *testing.T) {
+	pod := ButPodResourcePools(NewRandomNotScheduledPod(), "pool1, pool2")
+
+	require.True(t, PodBelongsToResourcePool(pod, []string{"pool1", "pool2"}, "pool1", false, nil))
+	require.True(t, PodBelongsToResourcePool(pod, []string{"pool1", "pool2"}, "pool2", false, nil))
+	require.False(t, PodBelongsToResourcePool(pod, []string{"pool1", "pool2"}, "pool3", false, nil))
+}
+
+func TestScheduledPodBelongsToResourcePool(t *testing.T) {
+	node1 := node.NewNode("node1", "pool1", machine.R5Metal())
+	node2 := node.NewNode("node2", "pool2", machine.R5Metal())
+	nodes := map[string]*k8sCore.Node{
+		node1.Name: node1,
+		node2.Name: node2,
+	}
+
+	pod := ButPodResourcePools(ButPodAssignedToNode(NewRandomNotScheduledPod(), node1), "pool1, pool2")
+
+	require.True(t, PodBelongsToResourcePool(pod, []string{"pool1", "pool2"}, "pool1", false, nodes))
+	require.False(t, PodBelongsToResourcePool(pod, []string{"pool1", "pool2"}, "pool2", false, nodes))
+	require.False(t, PodBelongsToResourcePool(pod, []string{"pool1", "pool2"}, "pool3", false, nodes))
 }

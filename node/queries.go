@@ -75,6 +75,22 @@ func IsNodeBootstrapping(node *k8sCore.Node, now time.Time, ageThreshold time.Du
 	return IsNodeBroken(node)
 }
 
+func IsNodeBootstrapping2(node *k8sCore.Node, pastDeadline func(*k8sCore.Node) bool) bool {
+	// This taint explicitly tells us that the node is initializing.
+	if FindTaint(node, commonNode.TaintKeyInit) != nil {
+		return true
+	}
+
+	if pastDeadline(node) {
+		return false
+	}
+
+	// Getting here does not guarantee (at least at the time of writing this change), that the new node is
+	// fully initialized and ready to take traffic. We make here a few heuristic guesses to improve th evaluation
+	// accuracy.
+	return IsNodeBroken(node)
+}
+
 func IsNodeBroken(node *k8sCore.Node) bool {
 	// FIXME Discern better between actual bad states and other cases
 	if HasNoExecuteTaint(node) {
@@ -123,6 +139,14 @@ func IsNodeTerminated(node *k8sCore.Node) bool {
 	return false
 }
 
+func FindNodeResourcePool(node *k8sCore.Node) (string, bool) {
+	return poolUtil.FindLabel(node.Labels, commonNode.LabelKeyResourcePool)
+}
+
+func NodeBelongsToResourcePool(node *k8sCore.Node, resourcePool string) bool {
+	return poolUtil.HasLabelAndValue(node.Labels, commonNode.LabelKeyResourcePool, resourcePool)
+}
+
 func Age(node *k8sCore.Node, now time.Time) time.Duration {
 	return now.Sub(node.CreationTimestamp.Time)
 }
@@ -157,6 +181,14 @@ func SortNodesByAge(nodes []*k8sCore.Node) []*k8sCore.Node {
 }
 
 func SumNodeResources(nodes []*k8sCore.Node) poolApi.ComputeResource {
+	var sum poolApi.ComputeResource
+	for _, node := range nodes {
+		sum = sum.Add(FromNodeToComputeResource(node))
+	}
+	return sum
+}
+
+func SumNodeResourcesInMap(nodes map[string]*k8sCore.Node) poolApi.ComputeResource {
 	var sum poolApi.ComputeResource
 	for _, node := range nodes {
 		sum = sum.Add(FromNodeToComputeResource(node))

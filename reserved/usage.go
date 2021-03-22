@@ -41,8 +41,8 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 
 func buildUsage(snapshot *resourcepool.ResourceSnapshot, reservation *capacityGroupV1.CapacityGroup) Usage {
 	allocated := poolV1.ComputeResource{}
-	for _, pod := range snapshot.Pods {
-		if poolPod.IsPodInCapacityGroup(pod, reservation.Name) && poolPod.IsPodRunning(pod) {
+	for _, pod := range snapshot.PodSnapshot.ScheduledByName {
+		if poolPod.IsPodInCapacityGroup(pod, reservation.Name) {
 			allocated = allocated.Add(poolPod.FromPodToComputeResource(pod))
 		}
 	}

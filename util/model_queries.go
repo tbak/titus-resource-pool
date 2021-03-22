@@ -38,6 +38,13 @@ func FromResourceListToComputeResource(limits v1.ResourceList) v12.ComputeResour
 	return result
 }
 
+func GetGpu(limits v1.ResourceList) int64 {
+	if gpu, ok := limits[ResourceGpu]; ok {
+		return gpu.Value()
+	}
+	return 0
+}
+
 func FromComputeResourceToResourceList(resources v12.ComputeResource) v1.ResourceList {
 	return v1.ResourceList{
 		v1.ResourceCPU:              resource.MustParse(strconv.FormatInt(resources.CPU, 10)),

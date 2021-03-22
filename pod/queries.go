@@ -9,6 +9,7 @@ import (
 	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	commonNode "github.com/Netflix/titus-kube-common/node"
 	commonPod "github.com/Netflix/titus-kube-common/pod"
+	poolNode "github.com/Netflix/titus-resource-pool/node"
 	poolUtil "github.com/Netflix/titus-resource-pool/util"
 	"github.com/Netflix/titus-resource-pool/util/xcollection"
 )
@@ -107,6 +108,96 @@ func IsPodFinished(pod *k8sCore.Pod) bool {
 
 func Age(pod *k8sCore.Pod, now time.Time) time.Duration {
 	return now.Sub(pod.CreationTimestamp.Time)
+}
+
+// A pod may be assigned to multiple resource pools. The first one returned is considered the primary which will
+// be scaled up if more capacity is needed.
+func FindPodAssignedResourcePools(pod *k8sCore.Pod) ([]string, bool) {
+	var poolNames string
+	var ok bool
+	if poolNames, ok = poolUtil.FindLabel(pod.Labels, commonNode.LabelKeyResourcePool); !ok {
+		if poolNames, ok = poolUtil.FindLabel(pod.Annotations, commonNode.LabelKeyResourcePool); !ok {
+			return []string{}, false
+		}
+	}
+	if poolNames == "" {
+		return []string{}, false
+	}
+	parts := strings.Split(poolNames, ",")
+	var names []string
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if len(trimmed) > 0 {
+			names = append(names, trimmed)
+		}
+	}
+	if len(names) == 0 {
+		return []string{}, false
+	}
+	return names, true
+}
+
+func FindPodPrimaryResourcePool(pod *k8sCore.Pod) (string, bool) {
+	if poolNames, ok := FindPodAssignedResourcePools(pod); ok {
+		return poolNames[0], true
+	}
+	return "", false
+}
+
+func IsPodInPrimaryResourcePool(resourcePool string, pod *k8sCore.Pod) bool {
+	if primary, ok := FindPodPrimaryResourcePool(pod); ok {
+		if primary == resourcePool {
+			return true
+		}
+	}
+	return false
+}
+
+// Find all pods for which the given resource pool is primary.
+func FindPodsWithPrimaryResourcePool(resourcePool string, pods []*k8sCore.Pod) []*k8sCore.Pod {
+	var result []*k8sCore.Pod
+	for _, pod := range pods {
+		if IsPodInPrimaryResourcePool(resourcePool, pod) {
+			result = append(result, pod)
+		}
+	}
+	return result
+}
+
+// TODO remove
+func PodBelongsToResourcePool(pod *k8sCore.Pod, assignedPools []string, resourcePool string,
+	resourcePoolWithGpus bool, nodes map[string]*k8sCore.Node) bool {
+
+	if len(assignedPools) == 0 {
+		return false
+	}
+
+	// Do not look at pods requesting GPU resources, but running in non-GPU resource pool.
+	if !resourcePoolWithGpus {
+		for _, container := range pod.Spec.Containers {
+			if poolUtil.GetGpu(container.Resources.Requests) > 0 {
+				return false
+			}
+		}
+	}
+
+	for _, pool := range assignedPools {
+		if pool == resourcePool {
+			// If the pod is not assigned to any node, we stop at this point.
+			if pod.Spec.NodeName == "" {
+				return true
+			}
+			// If the pod is assigned to a node, we check that the node itself belongs to the same resource pool.
+			if node, ok := nodes[pod.Spec.NodeName]; ok {
+				if poolNode.NodeBelongsToResourcePool(node, resourcePool) {
+					return true
+				}
+			}
+			return false
+		}
+	}
+
+	return false
 }
 
 func FromPodToComputeResource(pod *k8sCore.Pod) poolApi.ComputeResource {

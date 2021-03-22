@@ -23,18 +23,13 @@ type ResourceSnapshot struct {
 	client                 ctrlClient.Client
 	ResourcePoolName       string
 	NodeBootstrapThreshold time.Duration
+	PodYoungThreshold      time.Duration
 	IncludeKubeletBackend  bool
 	// State
-	ResourcePool  *poolV1.ResourcePoolConfig
-	Machines      []*machineTypeV1.MachineTypeConfig
-	Nodes         []*k8sCore.Node
-	ExcludedNodes []*k8sCore.Node
-	Pods          []*k8sCore.Pod
-	PodsByID      map[string]*k8sCore.Pod
-	// Pods with the primary resource pool being this one
-	PrimaryPods []*k8sCore.Pod
-	// Helper data structures
-	nodesByID map[string]*k8sCore.Node
+	ResourcePool *poolV1.ResourcePoolConfig
+	Machines     []*machineTypeV1.MachineTypeConfig
+	NodeSnapshot *poolNode.Snapshot
+	PodSnapshot  *poolPod.Snapshot
 }
 
 func NewResourceSnapshot(client ctrlClient.Client, resourcePoolName string,
@@ -61,19 +56,20 @@ func NewResourceSnapshot(client ctrlClient.Client, resourcePoolName string,
 			return nil, err
 		}
 	} else {
-		snapshot.Pods = []*k8sCore.Pod{}
+		snapshot.PodSnapshot = poolPod.NewEmpty()
 	}
 	return &snapshot, nil
 }
 
 // New resource snapshot that is statically configured. Reloading functions when called do nothing.
 func NewStaticResourceSnapshot(resourcePool *poolV1.ResourcePoolConfig, machines []*machineTypeV1.MachineTypeConfig,
-	nodes []*k8sCore.Node, pods []*k8sCore.Pod, nodeBootstrapThreshold time.Duration,
+	nodes []*k8sCore.Node, pods []*k8sCore.Pod, nodeBootstrapThreshold time.Duration, podYoungThreshold time.Duration,
 	includeKubeletBackend bool) *ResourceSnapshot {
 	snapshot := ResourceSnapshot{
 		ResourcePoolName:       resourcePool.Name,
 		ResourcePool:           resourcePool,
 		NodeBootstrapThreshold: nodeBootstrapThreshold,
+		PodYoungThreshold:      podYoungThreshold,
 		IncludeKubeletBackend:  includeKubeletBackend,
 		Machines:               machines,
 	}
@@ -82,45 +78,38 @@ func NewStaticResourceSnapshot(resourcePool *poolV1.ResourcePoolConfig, machines
 	return &snapshot
 }
 
-func (snapshot *ResourceSnapshot) ActiveCapacity() poolV1.ComputeResource {
-	total := poolV1.ComputeResource{}
-	for _, node := range snapshot.Nodes {
-		if !poolNode.IsNodeOnItsWayOut(node) {
-			total = total.Add(poolNode.FromNodeToComputeResource(node))
-		}
+// New resource snapshot that is statically configured. Reloading functions when called do nothing.
+func NewStaticResourceSnapshot2(resourcePool *poolV1.ResourcePoolConfig, machines []*machineTypeV1.MachineTypeConfig,
+	nodeSnapshot *poolNode.Snapshot, podSnapshot *poolPod.Snapshot, nodeBootstrapThreshold time.Duration,
+	podYoungThreshold time.Duration, includeKubeletBackend bool) *ResourceSnapshot {
+	snapshot := ResourceSnapshot{
+		ResourcePoolName:       resourcePool.Name,
+		ResourcePool:           resourcePool,
+		NodeBootstrapThreshold: nodeBootstrapThreshold,
+		PodYoungThreshold:      podYoungThreshold,
+		IncludeKubeletBackend:  includeKubeletBackend,
+		Machines:               machines,
+		NodeSnapshot:           nodeSnapshot,
+		PodSnapshot:            podSnapshot,
 	}
-	return total
+	return &snapshot
+}
+
+func (snapshot *ResourceSnapshot) ActiveCapacity() poolV1.ComputeResource {
+	return poolNode.SumNodeResourcesInMap(snapshot.NodeSnapshot.ActiveByName)
 }
 
 func (snapshot *ResourceSnapshot) ActiveNodeCount() int64 {
-	count := 0
-	for _, node := range snapshot.Nodes {
-		if !poolNode.IsNodeOnItsWayOut(node) {
-			count = count + 1
-		}
-	}
-	return int64(count)
+	return int64(len(snapshot.NodeSnapshot.ActiveByName))
 }
 
 // Sum of resources of all nodes that are explicitly marked as decommissioned/removable.
 func (snapshot *ResourceSnapshot) OnWayOutCapacity() poolV1.ComputeResource {
-	total := poolV1.ComputeResource{}
-	for _, node := range snapshot.Nodes {
-		if poolNode.IsNodeOnItsWayOut(node) {
-			total = total.Add(poolNode.FromNodeToComputeResource(node))
-		}
-	}
-	return total
+	return poolNode.SumNodeResourcesInMap(snapshot.NodeSnapshot.OnWayOutByName)
 }
 
 func (snapshot *ResourceSnapshot) OnWayOutNodeCount() int64 {
-	count := 0
-	for _, node := range snapshot.Nodes {
-		if poolNode.IsNodeOnItsWayOut(node) {
-			count = count + 1
-		}
-	}
-	return int64(count)
+	return int64(len(snapshot.NodeSnapshot.OnWayOutByName))
 }
 
 func (snapshot *ResourceSnapshot) NotProvisionedCapacity() poolV1.ComputeResource {
@@ -148,12 +137,12 @@ func (snapshot *ResourceSnapshot) DumpSnapshotToLog(log logr.Logger, options poo
 	log.Info(fmt.Sprintf("Resource pool aggregates: %s", snapshot.FormatResourceSnapshot(options)))
 	log.Info(fmt.Sprintf("Resource pool: %s", FormatResourcePool(snapshot.ResourcePool, options)))
 	if withNodes {
-		for _, node := range snapshot.Nodes {
+		for _, node := range snapshot.NodeSnapshot.AllByName {
 			log.Info(fmt.Sprintf("Node: %s", poolNode.FormatNode(node, snapshot.NodeBootstrapThreshold, options)))
 		}
 	}
 	if withPods {
-		for _, pod := range snapshot.Pods {
+		for _, pod := range snapshot.PodSnapshot.AllByName {
 			log.Info(fmt.Sprintf("Pod: %s", poolPod.FormatPod(pod, options)))
 		}
 	}
@@ -177,20 +166,20 @@ func (snapshot *ResourceSnapshot) AdjustResourcePoolSize(resourceCount int64) er
 }
 
 func (snapshot *ResourceSnapshot) UpdateNode(nodeID string, transformer func(*k8sCore.Node)) error {
-	node, ok := snapshot.nodesByID[nodeID]
-	if !ok {
-		return fmt.Errorf("resource pool does not include node %s", nodeID)
+	node, ok := snapshot.NodeSnapshot.AllByName[nodeID]
+	var patch ctrlClient.Patch
+	if ok && snapshot.client != nil {
+		patch = ctrlClient.MergeFrom(node.DeepCopy())
 	}
 
-	if snapshot.client == nil {
-		transformer(node)
-		return nil
-	}
-
-	patch := ctrlClient.MergeFrom(node.DeepCopy())
-	transformer(node)
-	if err := snapshot.client.Patch(context.TODO(), node, patch); err != nil {
+	if _, err := snapshot.NodeSnapshot.Transform(nodeID, transformer); err != nil {
 		return err
+	}
+
+	if snapshot.client != nil {
+		if err := snapshot.client.Patch(context.TODO(), node, patch); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -243,23 +232,14 @@ func (snapshot *ResourceSnapshot) ReloadNodes() error {
 }
 
 func (snapshot *ResourceSnapshot) updateNodeData(current []*k8sCore.Node) {
-	var nodes []*k8sCore.Node
-	var excludedNodes []*k8sCore.Node
-	nodesByID := map[string]*k8sCore.Node{}
-	for _, node := range current {
-		if NodeBelongsToResourcePool(node, &snapshot.ResourcePool.Spec) {
-			if snapshot.IncludeKubeletBackend || !poolNode.IsKubeletNode(node) {
-				nodes = append(nodes, node)
-				nodesByID[node.Name] = node
-			} else {
-				excludedNodes = append(excludedNodes, node)
-			}
-		}
-	}
-
-	snapshot.Nodes = nodes
-	snapshot.ExcludedNodes = excludedNodes
-	snapshot.nodesByID = nodesByID
+	snapshot.NodeSnapshot, _ = poolNode.NewSnapshotOfResourcePool(current, snapshot.ResourcePoolName, poolNode.Options{
+		PastBootstrapDeadline: func(node *k8sCore.Node, now time.Time) bool {
+			return poolNode.Age(node, now) > snapshot.NodeBootstrapThreshold
+		},
+		Exclude: func(node *k8sCore.Node) bool {
+			return !snapshot.IncludeKubeletBackend && poolNode.IsKubeletNode(node)
+		},
+	})
 }
 
 func (snapshot *ResourceSnapshot) ReloadPods() error {
@@ -276,18 +256,13 @@ func (snapshot *ResourceSnapshot) ReloadPods() error {
 }
 
 func (snapshot *ResourceSnapshot) updatePodData(current []*k8sCore.Pod) {
-	var pods []*k8sCore.Pod
-	var podsByID = make(map[string]*k8sCore.Pod)
-	for _, pod := range current {
-		if PodBelongsToResourcePool(pod, &snapshot.ResourcePool.Spec, snapshot.Nodes) {
-			pods = append(pods, pod)
-			podsByID[pod.Name] = pod
-		}
-	}
-
-	snapshot.Pods = pods
-	snapshot.PodsByID = podsByID
-	snapshot.PrimaryPods = FindPodsWithPrimaryResourcePool(snapshot.ResourcePoolName, pods)
+	unfiltered, _ := poolPod.NewSnapshotOfResourcePool(current, snapshot.ResourcePoolName, poolPod.Options{
+		SupportGPUs: snapshot.ResourcePool.Spec.ResourceShape.GPU > 0,
+		PastYoungThreshold: func(pod *k8sCore.Pod, now time.Time) bool {
+			return poolPod.Age(pod, now) > snapshot.PodYoungThreshold
+		},
+	})
+	snapshot.PodSnapshot, _ = poolPod.NewFilteredByNodeAllocation(unfiltered, snapshot.ResourcePoolName, snapshot.NodeSnapshot)
 }
 
 func formatResourceSnapshotCompact(snapshot *ResourceSnapshot) string {
@@ -303,7 +278,7 @@ func formatResourceSnapshotCompact(snapshot *ResourceSnapshot) string {
 		ActiveNodeCount:         snapshot.ActiveNodeCount(),
 		NotProvisionedNodeCount: snapshot.NotProvisionedCount(),
 		OnWayOutNodeCount:       snapshot.OnWayOutNodeCount(),
-		ExcludedNodeCount:       int64(len(snapshot.ExcludedNodes)),
+		ExcludedNodeCount:       int64(len(snapshot.NodeSnapshot.ExcludedByName)),
 	}
 	return poolUtil.ToJSONString(value)
 }
@@ -324,7 +299,7 @@ func formatResourceSnapshotEssentials(snapshot *ResourceSnapshot) string {
 		ActiveNodeCount:         snapshot.ActiveNodeCount(),
 		NotProvisionedNodeCount: snapshot.NotProvisionedCount(),
 		OnWayOutNodeCount:       snapshot.OnWayOutNodeCount(),
-		ExcludedNodeCount:       int64(len(snapshot.ExcludedNodes)),
+		ExcludedNodeCount:       int64(len(snapshot.NodeSnapshot.ExcludedByName)),
 		ActiveResources:         snapshot.ActiveCapacity(),
 		NotProvisionedResources: snapshot.NotProvisionedCapacity(),
 		OnWayOutResources:       snapshot.OnWayOutCapacity(),
