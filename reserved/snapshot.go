@@ -3,11 +3,14 @@ package reserved
 import (
 	"context"
 	"errors"
+	"strings"
 
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	capacityGroupV1 "github.com/Netflix/titus-controllers-api/api/capacitygroup/v1"
 )
+
+const critical = "critical"
 
 type CapacityGroupSnapshot struct {
 	// User provided
@@ -51,7 +54,10 @@ func (snapshot *CapacityGroupSnapshot) ReloadCapacityGroups() error {
 	if err := snapshot.client.List(context.TODO(), &capacityGroupList); err != nil {
 		return errors.New("cannot read capacity groups")
 	}
-	snapshot.updateCapacityGroupData(AsCapacityGroupReferenceList(&capacityGroupList))
+
+	filteredCapacityGroups := filterCapacityGroups(capacityGroupList)
+	snapshot.updateCapacityGroupData(filteredCapacityGroups)
+
 	return nil
 }
 
@@ -66,4 +72,32 @@ func (snapshot *CapacityGroupSnapshot) updateCapacityGroupData(capacityGroups []
 	snapshot.CapacityGroups = capacityGroups
 	snapshot.CapacityGroupsByName = capacityGroupsByName
 	snapshot.capacityGroupByResourcePool = capacityGroupByResourcePool
+}
+
+func filterCapacityGroups(cgl capacityGroupV1.CapacityGroupList) []*capacityGroupV1.CapacityGroup {
+	var result []*capacityGroupV1.CapacityGroup
+	for _, cg := range cgl.Items {
+		if isCritical(&cg) && cg.Spec.SchedulerName == PodSchedulerKube {
+			result = append(result, &cg)
+		}
+	}
+
+	return result
+}
+
+func getTier(cg *capacityGroupV1.CapacityGroup) string {
+	if cg.Annotations == nil {
+		return critical
+	}
+
+	if val, ok := cg.Annotations["tier"]; ok {
+		return val
+	}
+
+	return critical
+}
+
+func isCritical(cg *capacityGroupV1.CapacityGroup) bool {
+	tier := strings.ToLower(getTier(cg))
+	return tier == critical
 }
