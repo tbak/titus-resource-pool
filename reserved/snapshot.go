@@ -78,7 +78,7 @@ func filterCapacityGroups(cgl capacityGroupV1.CapacityGroupList) []*capacityGrou
 	var result []*capacityGroupV1.CapacityGroup
 	for _, cg := range cgl.Items {
 		if isCritical(&cg) && cg.Spec.SchedulerName == PodSchedulerKube {
-			result = append(result, &cg)
+			result = append(result, cg.DeepCopy())
 		}
 	}
 
