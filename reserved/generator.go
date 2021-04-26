@@ -17,9 +17,9 @@ func NewCapacityGroup(name string, resourcePoolName string) *capacityGroupV1.Cap
 }
 
 func NewRandomCapacityGroup(transformers ...func(node *capacityGroupV1.CapacityGroup)) *capacityGroupV1.CapacityGroup {
-	node := NewCapacityGroup(uuid.New().String()+".capacityGroup", resourcepool.PoolNameIntegration)
+	capacityGroup := NewCapacityGroup(uuid.New().String()+".capacityGroup", resourcepool.PoolNameIntegration)
 	for _, transformer := range transformers {
-		transformer(node)
+		transformer(capacityGroup)
 	}
-	return node
+	return capacityGroup
 }

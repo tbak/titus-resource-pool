@@ -23,4 +23,14 @@ var (
 			},
 		}
 	}
+
+	BasicResourcePool = func(name string, instanceCount int64, shape poolV1.ComputeResource) *poolV1.ResourcePoolConfig {
+		pool := ButResourcePoolName(EmptyResourcePool(), name)
+		pool.Spec.ResourceShape = poolV1.ResourceShape{
+			ComputeResource: shape,
+			Labels:          map[string]string{},
+		}
+		pool.Spec.ResourceCount = instanceCount
+		return pool
+	}
 )

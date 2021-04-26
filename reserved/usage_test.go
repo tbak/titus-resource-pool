@@ -1,49 +1,123 @@
 package reserved
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	k8sCore "k8s.io/api/core/v1"
 
 	capacityGroupV1 "github.com/Netflix/titus-controllers-api/api/capacitygroup/v1"
 	machineTypeV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
-	"github.com/Netflix/titus-resource-pool/machine"
+	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	poolNode "github.com/Netflix/titus-resource-pool/node"
 	"github.com/Netflix/titus-resource-pool/pod"
 	"github.com/Netflix/titus-resource-pool/resourcepool"
+	"github.com/Netflix/titus-resource-pool/util"
 )
 
-func TestNewCapacityReservationUsage(t *testing.T) {
-	pool := resourcepool.ButResourcePoolName(resourcepool.EmptyResourcePool(), resourcepool.PoolNameIntegration)
-	pool.Spec.ResourceCount = 20
+const (
+	integrationBuffer = "buffer"
+)
 
-	node := poolNode.NewNode("node1", resourcepool.PoolNameIntegration, machine.R5Metal())
+var (
+	// Basic resource unit used in this test suite.
+	computeUnit        = util.ComputeResourcesUnitProportional
+	podShape           = computeUnit.Multiply(8)
+	capacityGroupShape = computeUnit.Multiply(16)
+	bufferShape        = computeUnit.Multiply(96)
+)
 
-	pod1 := pod.ButPodResourcePools(pod.NewRandomNotScheduledPod(), resourcepool.PoolNameIntegration)
-	// '_' chars in the capacity-group pod label/annotation value will be converted to '-' to
-	// find the pod's correponding Capacity Group CRD in kube
-	pod1 = pod.ButPodCapacityGroup(pod1, "group_1")
-	pod1 = pod.ButPodAssignedToNode(pod1, node)
+func TestNewCapacityReservationUsageWithNoBuffer(t *testing.T) {
+	poolSnapshot, pods := newResourcePoolSnapshotWithOneNodeAndScheduledPods(1)
+	pod1 := pods[0]
 
-	poolSnapshot := resourcepool.NewStaticResourceSnapshot(pool, []*machineTypeV1.MachineTypeConfig{}, []*k8sCore.Node{node},
-		[]*k8sCore.Pod{pod1}, 0, 0, true)
+	capacityGroup1, capacityGroup2, _ := newCapacityGroupsWithBuffer()
+	capacityGroups := []*capacityGroupV1.CapacityGroup{capacityGroup1, capacityGroup2}
 
-	group1 := NewCapacityGroup("group-1", resourcepool.PoolNameIntegration)
-	group1.Spec.InstanceCount = 10
-	capacityGroups := []*capacityGroupV1.CapacityGroup{
-		group1,
-		NewCapacityGroup("group2", resourcepool.PoolNameIntegration),
-	}
-
-	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups)
+	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups, integrationBuffer)
 	require.Len(t, usage.InCapacityGroup, 2)
 
-	expectedGroup1Allocated := pod.FromPodToComputeResource(pod1)
+	expectedGroup1Allocated := pod.FromPodToComputeResource(pod1).AlignResourceRatios(capacityGroup1.Spec.ComputeResource)
 	expectedGroup1Unallocated := CapacityGroupResources(capacityGroups[0]).Sub(expectedGroup1Allocated)
 	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group-1"].Allocated)
 	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group-1"].Unallocated)
 	require.Equal(t, expectedGroup1Allocated, usage.AllReserved.Allocated)
 	require.Equal(t, expectedGroup1Unallocated.Add(CapacityGroupResources(capacityGroups[1])),
 		usage.AllReserved.Unallocated)
+}
+
+func TestNewCapacityReservationUsageWithNotUsedBuffer(t *testing.T) {
+	poolSnapshot, pods := newResourcePoolSnapshotWithOneNodeAndScheduledPods(1)
+	pod1 := pods[0]
+
+	capacityGroup1, capacityGroup2, buffer := newCapacityGroupsWithBuffer()
+	capacityGroups := []*capacityGroupV1.CapacityGroup{capacityGroup1, capacityGroup2, buffer}
+	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups, integrationBuffer)
+	require.Len(t, usage.InCapacityGroup, 2)
+
+	bufferResources := CapacityGroupResources(buffer)
+
+	expectedGroup1Allocated := pod.FromPodToComputeResource(pod1).AlignResourceRatios(capacityGroup1.Spec.ComputeResource)
+	expectedGroup1Unallocated := CapacityGroupResources(capacityGroups[0]).Sub(expectedGroup1Allocated)
+	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group-1"].Allocated)
+	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group-1"].Unallocated)
+	require.Equal(t, expectedGroup1Allocated, usage.AllReserved.Allocated)
+	require.Equal(t, expectedGroup1Unallocated.Add(CapacityGroupResources(capacityGroups[1])).Add(bufferResources),
+		usage.AllReserved.Unallocated)
+}
+
+func TestNewCapacityReservationUsageWithUsedBuffer(t *testing.T) {
+	// Capacity group size is 96 CPUs. Pod size is 8 CPUs. We need 12 pods to use reservation.
+	poolSnapshot, pods := newResourcePoolSnapshotWithOneNodeAndScheduledPods(16)
+	pod1 := pods[0]
+
+	capacityGroup1, capacityGroup2, buffer := newCapacityGroupsWithBuffer()
+	capacityGroups := []*capacityGroupV1.CapacityGroup{capacityGroup1, capacityGroup2, buffer}
+	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups, integrationBuffer)
+	require.Len(t, usage.InCapacityGroup, 2)
+
+	podResources := pod.FromPodToComputeResource(pod1)
+	expectedGroup1Allocated := podShape.Multiply(12)
+	expectedGroup1Unallocated := poolV1.Zero
+
+	bufferResources := CapacityGroupResources(buffer)
+	expectedBufferAllocated := podResources.AlignResourceRatios(bufferResources).Multiply(4)
+	expectedBufferUnallocated := CapacityGroupResources(buffer).Sub(expectedBufferAllocated)
+
+	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group-1"].Allocated)
+	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group-1"].Unallocated)
+	require.Equal(t, expectedGroup1Allocated.Add(expectedBufferAllocated), usage.AllReserved.Allocated)
+	require.Equal(t, expectedGroup1Unallocated.Add(CapacityGroupResources(capacityGroups[1])).Add(expectedBufferUnallocated),
+		usage.AllReserved.Unallocated)
+}
+
+func newResourcePoolSnapshotWithOneNodeAndScheduledPods(podCount int) (*resourcepool.ResourceSnapshot, []*k8sCore.Pod) {
+	pool := resourcepool.BasicResourcePool(resourcepool.PoolNameIntegration,
+		20,
+		computeUnit.Multiply(96),
+	)
+
+	node := poolNode.NewNode("node1", resourcepool.PoolNameIntegration, util.MachineFromUnitProportional96())
+
+	// '_' chars in the capacity-group pod label/annotation value will be converted to '-' to
+	// find the pod's corresponding Capacity Group CRD in kube
+	pods := []*k8sCore.Pod{}
+	for i := 0; i < podCount; i++ {
+		newPod := pod.NewNotScheduledPod(resourcepool.PoolNameIntegration, podShape, time.Now())
+		newPod = pod.ButPodCapacityGroup(newPod, "group_1")
+		newPod = pod.ButPodAssignedToNode(newPod, node)
+		pods = append(pods, newPod)
+	}
+
+	return resourcepool.NewStaticResourceSnapshot(pool, []*machineTypeV1.MachineTypeConfig{}, []*k8sCore.Node{node},
+		pods, 0, 0, true), pods
+}
+
+func newCapacityGroupsWithBuffer() (*capacityGroupV1.CapacityGroup, *capacityGroupV1.CapacityGroup, *capacityGroupV1.CapacityGroup) {
+	capacityGroup1 := BasicCapacityGroup("group-1", resourcepool.PoolNameIntegration, capacityGroupShape, 6)
+	capacityGroup2 := BasicCapacityGroup("group2", resourcepool.PoolNameIntegration, capacityGroupShape, 6)
+	buffer := BasicCapacityGroup(integrationBuffer, resourcepool.PoolNameIntegration, bufferShape, 1)
+	return capacityGroup1, capacityGroup2, buffer
 }
