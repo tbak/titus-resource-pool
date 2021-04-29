@@ -30,6 +30,8 @@ var (
 )
 
 func TestNewCapacityReservationUsageWithNoBuffer(t *testing.T) {
+	metrics := NewUsageMetrics("test", resourcepool.PoolNameIntegration, integrationBuffer, true)
+
 	poolSnapshot, pods := newResourcePoolSnapshotWithOneNodeAndScheduledPods(1)
 	pod1 := pods[0]
 
@@ -38,6 +40,7 @@ func TestNewCapacityReservationUsageWithNoBuffer(t *testing.T) {
 
 	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups, integrationBuffer)
 	require.Len(t, usage.InCapacityGroup, 2)
+	metrics.Update(usage)
 
 	expectedGroup1Allocated := pod.FromPodToComputeResource(pod1).AlignResourceRatios(capacityGroup1.Spec.ComputeResource)
 	expectedGroup1Unallocated := CapacityGroupResources(capacityGroups[0]).Sub(expectedGroup1Allocated)
@@ -49,6 +52,8 @@ func TestNewCapacityReservationUsageWithNoBuffer(t *testing.T) {
 }
 
 func TestNewCapacityReservationUsageWithNotUsedBuffer(t *testing.T) {
+	metrics := NewUsageMetrics("test", resourcepool.PoolNameIntegration, integrationBuffer, true)
+
 	poolSnapshot, pods := newResourcePoolSnapshotWithOneNodeAndScheduledPods(1)
 	pod1 := pods[0]
 
@@ -56,6 +61,7 @@ func TestNewCapacityReservationUsageWithNotUsedBuffer(t *testing.T) {
 	capacityGroups := []*capacityGroupV1.CapacityGroup{capacityGroup1, capacityGroup2, buffer}
 	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups, integrationBuffer)
 	require.Len(t, usage.InCapacityGroup, 2)
+	metrics.Update(usage)
 
 	bufferResources := CapacityGroupResources(buffer)
 
@@ -69,6 +75,8 @@ func TestNewCapacityReservationUsageWithNotUsedBuffer(t *testing.T) {
 }
 
 func TestNewCapacityReservationUsageWithUsedBuffer(t *testing.T) {
+	metrics := NewUsageMetrics("test", resourcepool.PoolNameIntegration, integrationBuffer, true)
+
 	// Capacity group size is 96 CPUs. Pod size is 8 CPUs. We need 12 pods to use reservation.
 	poolSnapshot, pods := newResourcePoolSnapshotWithOneNodeAndScheduledPods(16)
 	pod1 := pods[0]
@@ -77,6 +85,7 @@ func TestNewCapacityReservationUsageWithUsedBuffer(t *testing.T) {
 	capacityGroups := []*capacityGroupV1.CapacityGroup{capacityGroup1, capacityGroup2, buffer}
 	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups, integrationBuffer)
 	require.Len(t, usage.InCapacityGroup, 2)
+	metrics.Update(usage)
 
 	podResources := pod.FromPodToComputeResource(pod1)
 	expectedGroup1Allocated := podShape.Multiply(12)
