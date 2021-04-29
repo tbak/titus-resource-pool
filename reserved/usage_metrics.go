@@ -43,7 +43,7 @@ func NewUsageMetrics(metricsSubsystem string, resourcePoolName string, bufferNam
 			Name:           "totalReservedAndElasticUsage",
 			Help:           "Total usage of resources split by reserved and elastic capacity (%)",
 			StabilityLevel: metrics.ALPHA,
-		}, []string{"resourcePool", "resourceType", "used"},
+		}, []string{"resourcePool", "resourceType", "buffer", "used"},
 	)
 
 	legacyregistry.MustRegister(
@@ -84,7 +84,7 @@ func (m *UsageMetrics) Update(usage *CapacityReservationUsage) {
 		if bufferUsage, ok := usage.BufferAllocatedByCapacityGroup[capacityGroupName]; ok {
 			allocatedBufferPercentage := 0.0
 			if totalBuffer.IsAnyAboveZero() {
-				allocatedBufferPercentage = bufferUsage.MaxRatio(totalBuffer)
+				allocatedBufferPercentage = bufferUsage.MaxRatio(totalBuffer) * 100
 			}
 			m.capacityGroupUsageWithBufferAndElastic.WithLabelValues(m.resourcePoolName, capacityGroupName, buffer).Set(allocatedBufferPercentage)
 		} else {
@@ -94,7 +94,7 @@ func (m *UsageMetrics) Update(usage *CapacityReservationUsage) {
 		if elasticUsage, ok := usage.ElasticAllocatedByCapacityGroup[capacityGroupName]; ok {
 			allocatedElasticPercentage := 0.0
 			if totalElastic.IsAnyAboveZero() {
-				allocatedElasticPercentage = elasticUsage.MaxRatio(totalElastic)
+				allocatedElasticPercentage = elasticUsage.MaxRatio(totalElastic) * 100
 			}
 			m.capacityGroupUsageWithBufferAndElastic.WithLabelValues(m.resourcePoolName, capacityGroupName, elastic).Set(allocatedElasticPercentage)
 		} else {
@@ -116,12 +116,15 @@ func (m *UsageMetrics) Update(usage *CapacityReservationUsage) {
 	}
 	m.recentlyUpdatedCapacityGroups = updatedCapacityGroups
 
-	// Elastic capacity
-	reservedPercentage := usage.AllReserved.Allocated.MaxRatio(totalReserved) * 100
-	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, reserved, "true").Set(reservedPercentage)
-	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, reserved, "false").Set(100 - reservedPercentage)
+	// Total reserved and elastic.
+	nonBufferAllocated := usage.AllReserved.Allocated.Sub(usage.Buffer.Allocated)
+	nonBufferUnallocated := usage.AllReserved.Unallocated.Sub(usage.Buffer.Unallocated)
+	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, reserved, "false", "true").Set(nonBufferAllocated.MaxRatio(totalReserved) * 100)
+	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, reserved, "false", "false").Set(nonBufferUnallocated.MaxRatio(totalReserved) * 100)
+	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, reserved, "true", "true").Set(usage.Buffer.Allocated.MaxRatio(totalReserved) * 100)
+	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, reserved, "true", "false").Set(usage.Buffer.Unallocated.MaxRatio(totalReserved) * 100)
 
 	elasticPercentage := usage.Elastic.Allocated.MaxRatio(totalElastic) * 100
-	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, elastic, "true").Set(elasticPercentage)
-	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, elastic, "false").Set(100 - elasticPercentage)
+	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, elastic, "false", "true").Set(elasticPercentage)
+	m.totalReservedAndElasticUsage.WithLabelValues(m.resourcePoolName, elastic, "false", "false").Set(100 - elasticPercentage)
 }
