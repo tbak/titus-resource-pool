@@ -8,14 +8,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-// `Usage` represents a resource consumption within a capacity group. The pod resource demand is adjusted to the
-// capacity group resource shape. This is the worst case analysis.
-// For example, if capacity group shape is {cpu=10, memory=20}, and one pod has allocation {cpu=5, memory=5}, and
-// another one {cpu=5, memory=15}, it is rounded up respectively to {cpu=5, memory=10} and {cpu=8, memory=15}.
-// We do this to avoid situations like this: node={cpu=100, memory=500}, pod1={cpu=1, memory=499}, pod2={cpu=99, memory=1}.
-// If pod1 and pod2 are placed together on the same node they fit perfectly. But if not, they take two full nodes
-// with little chance that another user can place something there. This example is an artificially constructed extreme
-// case where real usage is a double of reservation, but in practice we can still expect this to be significant.
+// Usage represents a resource consumption within a capacity group.
 type Usage struct {
 	Allocated      poolV1.ComputeResource
 	Unallocated    poolV1.ComputeResource
@@ -58,11 +51,11 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 	for _, reservation := range reservations {
 		if reservation.Name == bufferName {
 			bufferCapacityGroup = reservation
+			break
 		}
 	}
 
 	resourcePool := snapshot.ResourcePool.Spec
-	resourcePoolShape := resourcePool.ResourceShape.ComputeResource
 
 	bufferShape := poolV1.Zero
 	bufferTotal := poolV1.Zero
@@ -84,7 +77,7 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 				allReserved.Unallocated = allReserved.Unallocated.Add(usage.Unallocated)
 				allReserved.OverAllocation = allReserved.OverAllocation.Add(usage.OverAllocation)
 
-				bufferAllocated, bufferOverallocation, elasticAllocated := buildBufferAndElasticUsage(remainingBuffer, bufferShape, resourcePoolShape, overallocatedPods)
+				bufferAllocated, bufferOverallocation, elasticAllocated := buildBufferAndElasticUsage(remainingBuffer, overallocatedPods)
 				bufferAllocatedByCapacityGroup[reservation.Spec.CapacityGroupName] = bufferAllocated
 				elasticAllocatedByCapacityGroup[reservation.Spec.CapacityGroupName] = elasticAllocated
 				remainingBuffer = remainingBuffer.Sub(bufferAllocated)
@@ -123,15 +116,13 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 }
 
 func buildUsage(snapshot *resourcepool.ResourceSnapshot, reservation *capacityGroupV1.CapacityGroup) (Usage, []*v1.Pod) {
-	reservationShape := reservation.Spec.ComputeResource
 	reservedResources := CapacityGroupResources(reservation)
 	allocated := poolV1.ComputeResource{}
 	overAllocated := poolV1.ComputeResource{}
 	overAllocationPods := []*v1.Pod{}
 	for _, pod := range snapshot.PodSnapshot.ScheduledByName {
 		if poolPod.IsPodInCapacityGroup(pod, reservation.Name) {
-			notAligned := poolPod.FromPodToComputeResource(pod)
-			podResources := notAligned.AlignResourceRatios(reservationShape)
+			podResources := poolPod.FromPodToComputeResource(pod)
 			nextAllocated := allocated.Add(podResources)
 			if nextAllocated != reservedResources && !nextAllocated.LessThan(reservedResources) {
 				overAllocated = overAllocated.Add(podResources)
@@ -149,18 +140,17 @@ func buildUsage(snapshot *resourcepool.ResourceSnapshot, reservation *capacityGr
 	}, overAllocationPods
 }
 
-func buildBufferAndElasticUsage(remainingBuffer poolV1.ComputeResource, bufferShape poolV1.ComputeResource,
-	resourcePoolShape poolV1.ComputeResource, bufferPods []*v1.Pod) (poolV1.ComputeResource, poolV1.ComputeResource, poolV1.ComputeResource) {
+func buildBufferAndElasticUsage(remainingBuffer poolV1.ComputeResource,
+	bufferPods []*v1.Pod) (poolV1.ComputeResource, poolV1.ComputeResource, poolV1.ComputeResource) {
 	bufferAllocated := poolV1.ComputeResource{}
 	bufferOverallocation := poolV1.ComputeResource{}
 	elasticAllocated := poolV1.ComputeResource{}
 	for _, pod := range bufferPods {
-		notAligned := poolPod.FromPodToComputeResource(pod)
-		alignedToBuffer := notAligned.AlignResourceRatios(bufferShape)
-		nextBufferAllocated := bufferAllocated.Add(alignedToBuffer)
+		podResources := poolPod.FromPodToComputeResource(pod)
+		nextBufferAllocated := bufferAllocated.Add(podResources)
 		if nextBufferAllocated != remainingBuffer && !nextBufferAllocated.LessThan(remainingBuffer) {
-			bufferOverallocation = bufferOverallocation.Add(alignedToBuffer)
-			elasticAllocated = elasticAllocated.Add(notAligned.AlignResourceRatios(resourcePoolShape))
+			bufferOverallocation = bufferOverallocation.Add(podResources)
+			elasticAllocated = elasticAllocated.Add(podResources)
 		} else {
 			bufferAllocated = nextBufferAllocated
 		}
