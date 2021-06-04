@@ -159,6 +159,10 @@ func FindNodeResourcePool(node *k8sCore.Node) (string, bool) {
 	return poolUtil.FindLabel(node.Labels, commonNode.LabelKeyResourcePool)
 }
 
+func FindNodeInstanceType(node *k8sCore.Node) (string, bool) {
+	return poolUtil.FindLabel(node.Labels, commonNode.LabelKeyInstanceType)
+}
+
 func NodeBelongsToResourcePool(node *k8sCore.Node, resourcePool string) bool {
 	return poolUtil.HasLabelAndValue(node.Labels, commonNode.LabelKeyResourcePool, resourcePool)
 }

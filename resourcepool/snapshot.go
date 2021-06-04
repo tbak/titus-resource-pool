@@ -12,6 +12,7 @@ import (
 
 	machineTypeV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
 	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
+	poolMachine "github.com/Netflix/titus-resource-pool/machine"
 	poolNode "github.com/Netflix/titus-resource-pool/node"
 	poolPod "github.com/Netflix/titus-resource-pool/pod"
 	poolUtil "github.com/Netflix/titus-resource-pool/util"
@@ -26,10 +27,11 @@ type ResourceSnapshot struct {
 	PodYoungThreshold      time.Duration
 	IncludeKubeletBackend  bool
 	// State
-	ResourcePool *poolV1.ResourcePoolConfig
-	Machines     []*machineTypeV1.MachineTypeConfig
-	NodeSnapshot *poolNode.Snapshot
-	PodSnapshot  *poolPod.Snapshot
+	ResourcePool   *poolV1.ResourcePoolConfig
+	Machines       []*machineTypeV1.MachineTypeConfig
+	MachinesByName map[string]*machineTypeV1.MachineTypeConfig
+	NodeSnapshot   *poolNode.Snapshot
+	PodSnapshot    *poolPod.Snapshot
 }
 
 func NewResourceSnapshot(client ctrlClient.Client, resourcePoolName string,
@@ -72,6 +74,7 @@ func NewStaticResourceSnapshot(resourcePool *poolV1.ResourcePoolConfig, machines
 		PodYoungThreshold:      podYoungThreshold,
 		IncludeKubeletBackend:  includeKubeletBackend,
 		Machines:               machines,
+		MachinesByName:         poolMachine.AsMachineTypeMap(machines),
 	}
 	snapshot.updateNodeData(nodes)
 	snapshot.updatePodData(pods)
@@ -89,6 +92,7 @@ func NewStaticResourceSnapshot2(resourcePool *poolV1.ResourcePoolConfig, machine
 		PodYoungThreshold:      podYoungThreshold,
 		IncludeKubeletBackend:  includeKubeletBackend,
 		Machines:               machines,
+		MachinesByName:         poolMachine.AsMachineTypeMap(machines),
 		NodeSnapshot:           nodeSnapshot,
 		PodSnapshot:            podSnapshot,
 	}
@@ -215,6 +219,7 @@ func (snapshot *ResourceSnapshot) ReloadMachines() error {
 		machines = append(machines, &tmp)
 	}
 	snapshot.Machines = machines
+	snapshot.MachinesByName = poolMachine.AsMachineTypeMap(machines)
 	return nil
 }
 
@@ -232,14 +237,15 @@ func (snapshot *ResourceSnapshot) ReloadNodes() error {
 }
 
 func (snapshot *ResourceSnapshot) updateNodeData(current []*k8sCore.Node) {
-	snapshot.NodeSnapshot, _ = poolNode.NewSnapshotOfResourcePool(current, snapshot.ResourcePoolName, poolNode.Options{
-		PastBootstrapDeadline: func(node *k8sCore.Node, now time.Time) bool {
-			return poolNode.Age(node, now) > snapshot.NodeBootstrapThreshold
-		},
-		Exclude: func(node *k8sCore.Node) bool {
-			return !snapshot.IncludeKubeletBackend && poolNode.IsKubeletNode(node)
-		},
-	})
+	snapshot.NodeSnapshot, _ = poolNode.NewSnapshotOfResourcePool(current, snapshot.ResourcePoolName, snapshot.MachinesByName,
+		poolNode.Options{
+			PastBootstrapDeadline: func(node *k8sCore.Node, now time.Time) bool {
+				return poolNode.Age(node, now) > snapshot.NodeBootstrapThreshold
+			},
+			Exclude: func(node *k8sCore.Node) bool {
+				return !snapshot.IncludeKubeletBackend && poolNode.IsKubeletNode(node)
+			},
+		})
 }
 
 func (snapshot *ResourceSnapshot) ReloadPods() error {

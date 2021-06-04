@@ -6,12 +6,14 @@ import (
 
 	k8sCore "k8s.io/api/core/v1"
 
+	machineV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
 	v1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 )
 
 type Metadata struct {
 	ResourcePool  string
 	NodeResources v1.ComputeResource
+	MachineType   *machineV1.MachineTypeConfig
 }
 
 // Node data snapshot with useful indexes for fast access. Snapshot struct can be mutated by calling the provided
@@ -28,7 +30,8 @@ type Snapshot struct {
 	// or OnWayOutByName collections. Primary use case is to exclude nodes running experimental Kube backends.
 	ExcludedByName map[string]*k8sCore.Node
 	// Internal state
-	options Options
+	machines map[string]*machineV1.MachineTypeConfig
+	options  Options
 }
 
 type Options struct {
@@ -51,11 +54,13 @@ func NewEmptySnapshot() *Snapshot {
 }
 
 // Returns Snapshot of nodes associated with the given resource pool and the list of the remaining nodes.
-func NewSnapshotOfResourcePool(nodes []*k8sCore.Node, resourcePool string, options Options) (*Snapshot, []*k8sCore.Node) {
+func NewSnapshotOfResourcePool(nodes []*k8sCore.Node, resourcePool string, machines map[string]*machineV1.MachineTypeConfig,
+	options Options) (*Snapshot, []*k8sCore.Node) {
 	now := time.Now()
 	pastBootstrapDeadline := currentPastBootstrapDeadline(options, now)
 
 	result := NewEmptySnapshot()
+	result.machines = machines
 	result.options = options
 
 	other := []*k8sCore.Node{}
@@ -65,7 +70,7 @@ func NewSnapshotOfResourcePool(nodes []*k8sCore.Node, resourcePool string, optio
 				result.ExcludedByName[node.Name] = node
 			} else {
 				result.AllByName[node.Name] = node
-				result.MetadataByteName[node.Name] = buildMetadata(node)
+				result.MetadataByteName[node.Name] = buildMetadata(node, machines)
 				if IsNodeOnItsWayOut(node) {
 					result.OnWayOutByName[node.Name] = node
 				} else if IsNodeBootstrapping2(node, pastBootstrapDeadline) {
@@ -81,11 +86,16 @@ func NewSnapshotOfResourcePool(nodes []*k8sCore.Node, resourcePool string, optio
 	return result, other
 }
 
-func buildMetadata(node *k8sCore.Node) *Metadata {
+func buildMetadata(node *k8sCore.Node, machines map[string]*machineV1.MachineTypeConfig) *Metadata {
 	resourcePool, _ := FindNodeResourcePool(node)
+	var machineType *machineV1.MachineTypeConfig
+	if machineName, ok := FindNodeInstanceType(node); ok {
+		machineType = machines[machineName]
+	}
 	return &Metadata{
 		ResourcePool:  resourcePool,
 		NodeResources: FromNodeToComputeResource(node),
+		MachineType:   machineType,
 	}
 }
 
@@ -128,7 +138,7 @@ func (s *Snapshot) Add(node *k8sCore.Node) bool {
 	delete(s.OnWayOutByName, node.Name)
 
 	s.AllByName[node.Name] = node
-	s.MetadataByteName[node.Name] = buildMetadata(node)
+	s.MetadataByteName[node.Name] = buildMetadata(node, s.machines)
 	if IsNodeOnItsWayOut(node) {
 		s.OnWayOutByName[node.Name] = node
 	} else if IsNodeBootstrapping2(node, pastBootstrapDeadline) {
