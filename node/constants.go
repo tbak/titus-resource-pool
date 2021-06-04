@@ -10,6 +10,7 @@ const (
 	// Possible node states
 	NodeStateBootstrapping  = "bootstrapping"
 	NodeStateActive         = "active"
+	NodeStatePhasedOut      = "phasedOut"
 	NodeStateDecommissioned = "decommissioned"
 	NodeStateScalingDown    = "scalingDown"
 	NodeStateBroken         = "broken"
@@ -19,6 +20,7 @@ const (
 var NodeStatesAll = []string{
 	NodeStateBootstrapping,
 	NodeStateActive,
+	NodeStatePhasedOut,
 	NodeStateDecommissioned,
 	NodeStateScalingDown,
 	NodeStateBroken,

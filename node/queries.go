@@ -31,6 +31,9 @@ func UniqueNodeState(node *k8sCore.Node, now time.Time, ageThreshold time.Durati
 	if IsNodeDecommissioned(node) {
 		return NodeStateDecommissioned
 	}
+	if IsNodePhasedOut(node) {
+		return NodeStatePhasedOut
+	}
 	if IsNodeScalingDown(node) {
 		return NodeStateScalingDown
 	}
@@ -116,8 +119,21 @@ func IsNodeOnItsWayOut(node *k8sCore.Node) bool {
 	return IsNodeToRemove(node) || IsNodeRemovable(node) || IsNodeTerminated(node)
 }
 
+// IsNodeDecommissioned returns true if the node has a decommissioning
+// taint with NoExecute effect. Nodes with decommissioning taint with any other effects (NoSchedule
+// and PreferNoSchedule) are considered schedulable.
 func IsNodeDecommissioned(node *k8sCore.Node) bool {
-	return FindTaint(node, commonNode.TaintKeyNodeDecommissioning) != nil
+	taint := FindTaint(node, commonNode.TaintKeyNodeDecommissioning)
+	return taint != nil && taint.Effect == k8sCore.TaintEffectNoExecute
+}
+
+// IsNodePhasedOut returns true if the node is tainted decommissioning with NoSchedule or PreferNoSchedule effect.
+// Such nodes are considered schedulable for most workloads with an exception of Titus Jobs with ActiveHost
+// hard constraints.
+func IsNodePhasedOut(node *k8sCore.Node) bool {
+	taint := FindTaint(node, commonNode.TaintKeyNodeDecommissioning)
+	return taint != nil && (taint.Effect == k8sCore.TaintEffectPreferNoSchedule ||
+		taint.Effect == k8sCore.TaintEffectNoSchedule)
 }
 
 func IsNodeScalingDown(node *k8sCore.Node) bool {
