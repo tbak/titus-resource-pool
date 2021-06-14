@@ -1,6 +1,6 @@
 module github.com/Netflix/titus-resource-pool
 
-go 1.16
+go 1.15
 
 replace (
 	k8s.io/api => k8s.io/api v0.19.9
@@ -18,9 +18,9 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/prometheus/client_golang v1.7.1
 	github.com/stretchr/testify v1.6.1
-	k8s.io/api v0.20.2
-	k8s.io/apimachinery v0.20.2
-	k8s.io/component-base v0.20.2
-	sigs.k8s.io/controller-runtime v0.8.3
+	k8s.io/api v0.19.9
+	k8s.io/apimachinery v0.19.9
+	k8s.io/component-base v0.19.9
+	sigs.k8s.io/controller-runtime v0.7.2
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.3 // indirect
 )
