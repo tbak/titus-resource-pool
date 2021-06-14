@@ -11,7 +11,7 @@ replace (
 )
 
 require (
-	github.com/Netflix/titus-controllers-api v0.0.11
+	github.com/Netflix/titus-controllers-api v0.0.13
 	github.com/Netflix/titus-kube-common v0.15.0
 	github.com/go-logr/logr v0.3.0
 	github.com/gogo/protobuf v1.3.2 // indirect

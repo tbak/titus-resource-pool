@@ -10,15 +10,16 @@ import (
 )
 
 func ComputeAllocatableCapacityFromSnapshot(snapshot *ResourceSnapshot,
-	minimumResources scaler.ComputeResource) scaler.ComputeResource {
+	minimumResources scaler.ComputeResource, adjust bool) scaler.ComputeResource {
 	scheduledPods := snapshot.PodSnapshot.ScheduledByName
-	return ComputeAllocatableCapacity(scheduledPods, snapshot.NodeSnapshot.ActiveByName, minimumResources)
+	return ComputeAllocatableCapacity(scheduledPods, snapshot.NodeSnapshot.ActiveByName, minimumResources, adjust)
 }
 
 // In order to compute allocatable capacity and be robust to the opportunistic-cpu-driven oversubscription case,
 // we cannot work in aggregate and subtract total allocated capacity from total provisioned capacity.
 // We need to do the accounting per node, and then sum.
-func ComputeAllocatableCapacity(scheduledPods map[string]*v1.Pod, nodes map[string]*v1.Node, minimumResources scaler.ComputeResource) scaler.ComputeResource {
+func ComputeAllocatableCapacity(scheduledPods map[string]*v1.Pod, nodes map[string]*v1.Node,
+	minimumResources scaler.ComputeResource, adjust bool) scaler.ComputeResource {
 	nodeToAvailable := make(map[string]scaler.ComputeResource)
 	nodeToUsed := make(map[string]scaler.ComputeResource)
 
@@ -42,8 +43,11 @@ func ComputeAllocatableCapacity(scheduledPods map[string]*v1.Pod, nodes map[stri
 	for nodeID, nodeUsed := range nodeToUsed {
 		nodeAvailable := nodeToAvailable[nodeID]
 		nodeRemaining := nodeAvailable.SubWithLimit(nodeUsed, 0)
-		if nodeRemaining == minimumResources || nodeRemaining.GreaterThan(minimumResources) {
-			adjustedUsed := nodeUsed.AlignResourceRatios(nodeAvailable)
+		if nodeRemaining.GreaterThanOrEqual(minimumResources) {
+			adjustedUsed := nodeUsed
+			if adjust {
+				adjustedUsed = nodeUsed.AlignResourceRatios(nodeAvailable)
+			}
 			remainingAdjusted := nodeAvailable.SubWithLimit(adjustedUsed, 0)
 			tot = tot.Add(remainingAdjusted)
 		}
