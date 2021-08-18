@@ -1,8 +1,9 @@
 package resourcepool
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	k8sCore "k8s.io/api/core/v1"
 

@@ -40,13 +40,13 @@ func TestFilterCapacityGroups(t *testing.T) {
 	}
 	criticalFenzo.Spec.SchedulerName = PodSchedulerFenzo
 
-	flexKube:= NewCapacityGroup("flexKube", "flexKubePool")
+	flexKube := NewCapacityGroup("flexKube", "flexKubePool")
 	flexKube.Annotations = map[string]string{
 		"tier": "Flex",
 	}
 	flexKube.Spec.SchedulerName = PodSchedulerKube
 
-	flexFenzo:= NewCapacityGroup("flexFenzo", "flexFenzoPool")
+	flexFenzo := NewCapacityGroup("flexFenzo", "flexFenzoPool")
 	flexFenzo.Annotations = map[string]string{
 		"tier": "Flex",
 	}

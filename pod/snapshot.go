@@ -1,10 +1,11 @@
 package pod
 
 import (
+	"time"
+
 	v1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	poolNode "github.com/Netflix/titus-resource-pool/node"
 	k8sCore "k8s.io/api/core/v1"
-	"time"
 )
 
 type Metadata struct {
