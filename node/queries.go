@@ -6,6 +6,7 @@ import (
 
 	k8sCore "k8s.io/api/core/v1"
 
+	machineTypeV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
 	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	commonNode "github.com/Netflix/titus-kube-common/node"
 	poolUtil "github.com/Netflix/titus-resource-pool/util"
@@ -175,6 +176,25 @@ func FromNodeToComputeResource(node *k8sCore.Node) poolApi.ComputeResource {
 	return poolUtil.FromResourceListToComputeResource(node.Status.Allocatable)
 }
 
+func FromNodeToPhysicalComputeResource(node *k8sCore.Node, machinesByName map[string]*machineTypeV1.MachineTypeConfig) (*poolApi.ComputeResource, bool) {
+	iType, ok := FindNodeInstanceType(node)
+	if !ok {
+		return nil, false
+	}
+	machineType, ok := machinesByName[iType]
+	if !ok {
+		return nil, false
+	}
+
+	return &poolApi.ComputeResource{
+		CPU:         machineType.Spec.CPU,
+		MemoryMB:    machineType.Spec.MemoryMB,
+		DiskMB:      machineType.Spec.DiskMB,
+		NetworkMBPS: machineType.Spec.NetworkMBPS,
+		GPU:         machineType.Spec.GPU,
+	}, true
+}
+
 func Names(nodes []*k8sCore.Node) []string {
 	var names []string
 	for _, node := range nodes {
@@ -214,4 +234,16 @@ func SumNodeResourcesInMap(nodes map[string]*k8sCore.Node) poolApi.ComputeResour
 		sum = sum.Add(FromNodeToComputeResource(node))
 	}
 	return sum
+}
+
+func SumNodesPhysicalResources(nodes []*k8sCore.Node, machinesByName map[string]*machineTypeV1.MachineTypeConfig) (*poolApi.ComputeResource, bool) {
+	var sum poolApi.ComputeResource
+	for _, n := range nodes {
+		r, ok := FromNodeToPhysicalComputeResource(n, machinesByName)
+		if !ok {
+			return nil, false
+		}
+		sum = sum.Add(*r)
+	}
+	return &sum, true
 }
