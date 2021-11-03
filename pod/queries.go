@@ -103,7 +103,7 @@ func IsPodRunning(pod *k8sCore.Pod) bool {
 }
 
 func IsPodFinished(pod *k8sCore.Pod) bool {
-	return pod.Status.Phase == k8sCore.PodSucceeded || pod.Status.Phase == k8sCore.PodFailed
+	return pod.Status.Phase == k8sCore.PodSucceeded || pod.Status.Phase == k8sCore.PodFailed || pod.ObjectMeta.DeletionTimestamp != nil
 }
 
 func Age(pod *k8sCore.Pod, now time.Time) time.Duration {
