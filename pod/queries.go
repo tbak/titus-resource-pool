@@ -92,7 +92,9 @@ func IsPodInCapacityGroup(pod *k8sCore.Pod, capacityGroupName string) bool {
 }
 
 func IsPodWaitingToBeScheduled(pod *k8sCore.Pod) bool {
-	return pod.Spec.NodeName == "" && !IsPodFinished(pod)
+	// in some rare cases, a pod killed before scheduling might stay in Pending phase without
+	// a nodeName but with a DeletionTimestamp
+	return pod.Spec.NodeName == "" && !IsPodFinished(pod) && pod.ObjectMeta.DeletionTimestamp == nil
 }
 
 func IsPodRunning(pod *k8sCore.Pod) bool {
@@ -103,7 +105,7 @@ func IsPodRunning(pod *k8sCore.Pod) bool {
 }
 
 func IsPodFinished(pod *k8sCore.Pod) bool {
-	return pod.Status.Phase == k8sCore.PodSucceeded || pod.Status.Phase == k8sCore.PodFailed || pod.ObjectMeta.DeletionTimestamp != nil
+	return pod.Status.Phase == k8sCore.PodSucceeded || pod.Status.Phase == k8sCore.PodFailed
 }
 
 func Age(pod *k8sCore.Pod, now time.Time) time.Duration {
