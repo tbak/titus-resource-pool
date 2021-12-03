@@ -102,6 +102,15 @@ func TestNewCapacityReservationUsageWithUsedBuffer(t *testing.T) {
 		usage.AllReserved.Unallocated)
 }
 
+func TestSameSubsystemDifferentResourcePool(t *testing.T) {
+	const subsystem = "test_subsystem"
+	const resourcePoolA = "resource_pool_a"
+	const resourcePoolB = "resource_pool_b"
+
+	_ = NewUsageMetrics(subsystem, resourcePoolA, integrationBuffer, true)
+	_ = NewUsageMetrics(subsystem, resourcePoolB, integrationBuffer, true)
+}
+
 func newResourcePoolSnapshotWithOneNodeAndScheduledPods(podCount int) (*resourcepool.ResourceSnapshot, []*k8sCore.Pod) {
 	pool := resourcepool.BasicResourcePool(resourcepool.PoolNameIntegration,
 		20,
