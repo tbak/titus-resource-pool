@@ -33,11 +33,11 @@ type UsageMetrics struct {
 // Duplicate metrics registrations are not allowed by prometheus, so we have to track it globally.
 var (
 	usageMetricsRegistryLock sync.Mutex
-	usageMetricsRegistry     = map[string]map[string]*usageMetricsInternal{}
+	usageMetricsRegistry     = map[string]*usageMetricsInternal{}
 )
 
 func NewUsageMetrics(metricsSubsystem string, resourcePoolName string, bufferName string, leader bool) *UsageMetrics {
-	internalMetrics := getOrCreateInternalMetrics(metricsSubsystem, resourcePoolName)
+	internalMetrics := getOrCreateInternalMetrics(metricsSubsystem)
 	sharedLabels := prometheus.Labels{
 		"leader":       strconv.FormatBool(leader),
 		"resourcePool": resourcePoolName,
@@ -54,16 +54,12 @@ func NewUsageMetrics(metricsSubsystem string, resourcePoolName string, bufferNam
 	return m
 }
 
-func getOrCreateInternalMetrics(metricsSubsystem string, resourcePoolName string) *usageMetricsInternal {
+func getOrCreateInternalMetrics(metricsSubsystem string) *usageMetricsInternal {
 	usageMetricsRegistryLock.Lock()
 	defer usageMetricsRegistryLock.Unlock()
 
-	if subsystemMap, ok := usageMetricsRegistry[metricsSubsystem]; ok {
-		if resourcePoolMetrics, ok := subsystemMap[resourcePoolName]; ok {
-			return resourcePoolMetrics
-		}
-	} else {
-		usageMetricsRegistry[metricsSubsystem] = map[string]*usageMetricsInternal{}
+	if subsystemMetrics, ok := usageMetricsRegistry[metricsSubsystem]; ok {
+		return subsystemMetrics
 	}
 
 	capacityGroupUsageUnrestricted := metrics.NewGaugeVec(
@@ -102,7 +98,7 @@ func getOrCreateInternalMetrics(metricsSubsystem string, resourcePoolName string
 		capacityGroupUsageWithBufferAndElastic: capacityGroupUsageWithBufferAndElastic,
 		totalReservedAndElasticUsage:           totalReservedAndElasticUsage,
 	}
-	usageMetricsRegistry[metricsSubsystem][resourcePoolName] = resourcePoolMetrics
+	usageMetricsRegistry[metricsSubsystem] = resourcePoolMetrics
 	return resourcePoolMetrics
 }
 
