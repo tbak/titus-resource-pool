@@ -10,7 +10,7 @@ import (
 )
 
 func ComputeAllocatableCapacityFromSnapshot(snapshot *ResourceSnapshot,
-	minimumResources scaler.ComputeResource, adjust bool) scaler.ComputeResource {
+	minimumResources scaler.ComputeResource, adjust bool) (scaler.ComputeResource, map[string]scaler.ComputeResource) {
 	scheduledPods := snapshot.PodSnapshot.ScheduledByName
 	return ComputeAllocatableCapacity(scheduledPods, snapshot.NodeSnapshot.ActiveByName, minimumResources, adjust)
 }
@@ -18,8 +18,10 @@ func ComputeAllocatableCapacityFromSnapshot(snapshot *ResourceSnapshot,
 // In order to compute allocatable capacity and be robust to the opportunistic-cpu-driven oversubscription case,
 // we cannot work in aggregate and subtract total allocated capacity from total provisioned capacity.
 // We need to do the accounting per node, and then sum.
+// The second return value is a map that contains actual remaining capacity per node without taking any
+// DRF resource adjustment and minimum resource size check for debugging purposes.
 func ComputeAllocatableCapacity(scheduledPods map[string]*v1.Pod, nodes map[string]*v1.Node,
-	minimumResources scaler.ComputeResource, adjust bool) scaler.ComputeResource {
+	minimumResources scaler.ComputeResource, adjust bool) (scaler.ComputeResource, map[string]scaler.ComputeResource) {
 	nodeToAvailable := make(map[string]scaler.ComputeResource)
 	nodeToUsed := make(map[string]scaler.ComputeResource)
 
@@ -40,6 +42,7 @@ func ComputeAllocatableCapacity(scheduledPods map[string]*v1.Pod, nodes map[stri
 	// Sum what is remaining, but only look at nodes with large enough resource chunks left.
 	// Align the remaining resources to the mostly utilized resource.
 	tot := scaler.ComputeResource{}
+	nodeRemainingCapacityDebug := map[string]scaler.ComputeResource{}
 	for nodeID, nodeUsed := range nodeToUsed {
 		nodeAvailable := nodeToAvailable[nodeID]
 		nodeRemaining := nodeAvailable.SubWithLimit(nodeUsed, 0)
@@ -51,7 +54,8 @@ func ComputeAllocatableCapacity(scheduledPods map[string]*v1.Pod, nodes map[stri
 			remainingAdjusted := nodeAvailable.SubWithLimit(adjustedUsed, 0)
 			tot = tot.Add(remainingAdjusted)
 		}
+		nodeRemainingCapacityDebug[nodeID] = nodeRemaining
 	}
 
-	return tot
+	return tot, nodeRemainingCapacityDebug
 }
