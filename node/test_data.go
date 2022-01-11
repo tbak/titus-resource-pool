@@ -27,6 +27,7 @@ func NewNode(name string, resourcePoolName string, machineTypeConfig *machineTyp
 			Namespace: "default",
 			Labels: map[string]string{
 				node.LabelKeyResourcePool: resourcePoolName,
+				node.LabelKeyInstanceType: machineTypeConfig.Name,
 			},
 		},
 		Status: coreV1.NodeStatus{
