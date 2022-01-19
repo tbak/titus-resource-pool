@@ -27,12 +27,16 @@ func TestComputeAllocatableCapacity(t *testing.T) {
 	available := nodeAvailable.Sub(podResources)
 	nodesActualRemaining := map[string]scaler.ComputeResource{node.Name: available}
 	// Adjusted
-	remaining, nodeRemainingCapDebug := ComputeAllocatableCapacity(map[string]*k8sCore.Pod{pod.Name: pod}, nodes, scaler.Zero, true)
-	require.Equal(t, nodeAvailable.Divide(4), remaining)
+	remainingAdjusted, remainingActual, nodeRemainingCapDebug :=
+		ComputeAllocatableCapacity(map[string]*k8sCore.Pod{pod.Name: pod}, nodes, scaler.Zero, true)
+	require.Equal(t, nodeAvailable.Divide(4), remainingAdjusted)
+	require.Equal(t, available, remainingActual)
 	require.Equal(t, nodesActualRemaining, nodeRemainingCapDebug)
 
 	// Not adjusted
-	remaining, nodeRemainingCapDebug = ComputeAllocatableCapacity(map[string]*k8sCore.Pod{pod.Name: pod}, nodes, scaler.Zero, false)
-	require.Equal(t, available, remaining)
+	remainingAdjusted, remainingActual, nodeRemainingCapDebug =
+		ComputeAllocatableCapacity(map[string]*k8sCore.Pod{pod.Name: pod}, nodes, scaler.Zero, false)
+	require.Equal(t, available, remainingAdjusted)
+	require.Equal(t, available, remainingActual)
 	require.Equal(t, nodesActualRemaining, nodeRemainingCapDebug)
 }
