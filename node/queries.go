@@ -141,8 +141,13 @@ func IsNodeScalingDown(node *k8sCore.Node) bool {
 	return FindTaint(node, commonNode.TaintKeyNodeScalingDown) != nil
 }
 
+func IsNodeEvacuating(node *k8sCore.Node) bool {
+	taint := FindTaint(node, commonNode.TaintKeyNodeEvacuate)
+	return taint != nil && taint.Effect == k8sCore.TaintEffectNoExecute
+}
+
 func IsNodeToRemove(node *k8sCore.Node) bool {
-	return IsNodeDecommissioned(node) || IsNodeScalingDown(node)
+	return IsNodeDecommissioned(node) || IsNodeScalingDown(node) || IsNodeEvacuating(node)
 }
 
 func IsNodeRemovable(node *k8sCore.Node) bool {
