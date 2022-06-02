@@ -57,8 +57,8 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 
 	resourcePool := snapshot.ResourcePool.Spec
 
-	bufferShape := poolV1.Zero
-	bufferTotal := poolV1.Zero
+	var bufferShape poolV1.ComputeResource
+	var bufferTotal poolV1.ComputeResource
 	if bufferCapacityGroup != nil {
 		bufferShape = bufferCapacityGroup.Spec.ComputeResource
 		bufferTotal = bufferShape.Multiply(int64(bufferCapacityGroup.Spec.InstanceCount))
