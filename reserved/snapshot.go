@@ -67,7 +67,7 @@ func (snapshot *CapacityGroupSnapshot) updateCapacityGroupData(capacityGroups []
 	for _, capacityGroup := range capacityGroups {
 		capacityGroupByResourcePool[capacityGroup.Spec.ResourcePoolName] = append(
 			capacityGroupByResourcePool[capacityGroup.Spec.ResourcePoolName], capacityGroup)
-		capacityGroupsByName[capacityGroup.Name] = capacityGroup
+		capacityGroupsByName[GetNormalizedCapacityGroupName(capacityGroup)] = capacityGroup
 	}
 	snapshot.CapacityGroups = capacityGroups
 	snapshot.CapacityGroupsByName = capacityGroupsByName

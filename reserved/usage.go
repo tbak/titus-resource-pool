@@ -71,15 +71,16 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 		if reservation.Spec.ResourcePoolName == snapshot.ResourcePoolName {
 			if reservation.Name != bufferName {
 				usage, overallocatedPods := buildUsage(snapshot, reservation)
-				inCapacityGroup[reservation.Spec.CapacityGroupName] = usage
+				reservationName := GetNormalizedCapacityGroupName(reservation)
+				inCapacityGroup[reservationName] = usage
 
 				allReserved.Allocated = allReserved.Allocated.Add(usage.Allocated)
 				allReserved.Unallocated = allReserved.Unallocated.Add(usage.Unallocated)
 				allReserved.OverAllocation = allReserved.OverAllocation.Add(usage.OverAllocation)
 
 				bufferAllocated, bufferOverallocation, elasticAllocated := buildBufferAndElasticUsage(remainingBuffer, overallocatedPods)
-				bufferAllocatedByCapacityGroup[reservation.Spec.CapacityGroupName] = bufferAllocated
-				elasticAllocatedByCapacityGroup[reservation.Spec.CapacityGroupName] = elasticAllocated
+				bufferAllocatedByCapacityGroup[reservationName] = bufferAllocated
+				elasticAllocatedByCapacityGroup[reservationName] = elasticAllocated
 				remainingBuffer = remainingBuffer.Sub(bufferAllocated)
 				totalBufferOverallocation = totalBufferOverallocation.Add(bufferOverallocation)
 				totalElasticAllocation = totalElasticAllocation.Add(elasticAllocated)
