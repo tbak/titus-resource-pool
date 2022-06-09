@@ -29,10 +29,11 @@ var (
 		}
 	}
 
-	BasicCapacityGroup = func(name string, resourcePoolName string, shape v1.ComputeResource, count uint32) *capacityGroupV1.CapacityGroup {
+	BasicCapacityGroup = func(name, originalName string, resourcePoolName string, shape v1.ComputeResource, count uint32) *capacityGroupV1.CapacityGroup {
 		return &capacityGroupV1.CapacityGroup{
 			ObjectMeta: metaV1.ObjectMeta{
-				Name: name,
+				Name:        name,
+				Annotations: map[string]string{"capacitygroup.com.netflix.titus/original-name": originalName},
 			},
 			Spec: capacityGroupV1.CapacityGroupSpec{
 				CapacityGroupName: name,

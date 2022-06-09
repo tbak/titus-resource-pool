@@ -35,19 +35,21 @@ func TestNewCapacityReservationUsageWithNoBuffer(t *testing.T) {
 	poolSnapshot, pods := newResourcePoolSnapshotWithOneNodeAndScheduledPods(1)
 	pod1 := pods[0]
 
-	capacityGroup1, capacityGroup2, _ := newCapacityGroupsWithBuffer()
-	capacityGroups := []*capacityGroupV1.CapacityGroup{capacityGroup1, capacityGroup2}
+	capacityGroup1, capacityGroup2, capacityGroup3, _ := newCapacityGroupsWithBuffer()
+	capacityGroups := []*capacityGroupV1.CapacityGroup{capacityGroup1, capacityGroup2, capacityGroup3}
 
 	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups, integrationBuffer)
-	require.Len(t, usage.InCapacityGroup, 2)
+	require.Len(t, usage.InCapacityGroup, 3)
 	metrics.Update(usage)
 
 	expectedGroup1Allocated := pod.FromPodToComputeResource(pod1).AlignResourceRatios(capacityGroup1.Spec.ComputeResource)
 	expectedGroup1Unallocated := CapacityGroupResources(capacityGroups[0]).Sub(expectedGroup1Allocated)
-	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group-1"].Allocated)
-	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group-1"].Unallocated)
+	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group_1"].Allocated)
+	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group_1"].Unallocated)
 	require.Equal(t, expectedGroup1Allocated, usage.AllReserved.Allocated)
-	require.Equal(t, expectedGroup1Unallocated.Add(CapacityGroupResources(capacityGroups[1])),
+	require.Equal(t, expectedGroup1Unallocated.
+		Add(CapacityGroupResources(capacityGroups[1])).
+		Add(CapacityGroupResources(capacityGroups[2])),
 		usage.AllReserved.Unallocated)
 }
 
@@ -57,7 +59,7 @@ func TestNewCapacityReservationUsageWithNotUsedBuffer(t *testing.T) {
 	poolSnapshot, pods := newResourcePoolSnapshotWithOneNodeAndScheduledPods(1)
 	pod1 := pods[0]
 
-	capacityGroup1, capacityGroup2, buffer := newCapacityGroupsWithBuffer()
+	capacityGroup1, capacityGroup2, _, buffer := newCapacityGroupsWithBuffer()
 	capacityGroups := []*capacityGroupV1.CapacityGroup{capacityGroup1, capacityGroup2, buffer}
 	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups, integrationBuffer)
 	require.Len(t, usage.InCapacityGroup, 2)
@@ -67,8 +69,8 @@ func TestNewCapacityReservationUsageWithNotUsedBuffer(t *testing.T) {
 
 	expectedGroup1Allocated := pod.FromPodToComputeResource(pod1).AlignResourceRatios(capacityGroup1.Spec.ComputeResource)
 	expectedGroup1Unallocated := CapacityGroupResources(capacityGroups[0]).Sub(expectedGroup1Allocated)
-	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group-1"].Allocated)
-	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group-1"].Unallocated)
+	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group_1"].Allocated)
+	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group_1"].Unallocated)
 	require.Equal(t, expectedGroup1Allocated, usage.AllReserved.Allocated)
 	require.Equal(t, expectedGroup1Unallocated.Add(CapacityGroupResources(capacityGroups[1])).Add(bufferResources),
 		usage.AllReserved.Unallocated)
@@ -81,7 +83,7 @@ func TestNewCapacityReservationUsageWithUsedBuffer(t *testing.T) {
 	poolSnapshot, pods := newResourcePoolSnapshotWithOneNodeAndScheduledPods(16)
 	pod1 := pods[0]
 
-	capacityGroup1, capacityGroup2, buffer := newCapacityGroupsWithBuffer()
+	capacityGroup1, capacityGroup2, _, buffer := newCapacityGroupsWithBuffer()
 	capacityGroups := []*capacityGroupV1.CapacityGroup{capacityGroup1, capacityGroup2, buffer}
 	usage := NewCapacityReservationUsage(poolSnapshot, capacityGroups, integrationBuffer)
 	require.Len(t, usage.InCapacityGroup, 2)
@@ -95,10 +97,12 @@ func TestNewCapacityReservationUsageWithUsedBuffer(t *testing.T) {
 	expectedBufferAllocated := podResources.AlignResourceRatios(bufferResources).Multiply(4)
 	expectedBufferUnallocated := CapacityGroupResources(buffer).Sub(expectedBufferAllocated)
 
-	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group-1"].Allocated)
-	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group-1"].Unallocated)
+	require.Equal(t, expectedGroup1Allocated, usage.InCapacityGroup["group_1"].Allocated)
+	require.Equal(t, expectedGroup1Unallocated, usage.InCapacityGroup["group_1"].Unallocated)
 	require.Equal(t, expectedGroup1Allocated.Add(expectedBufferAllocated), usage.AllReserved.Allocated)
-	require.Equal(t, expectedGroup1Unallocated.Add(CapacityGroupResources(capacityGroups[1])).Add(expectedBufferUnallocated),
+	require.Equal(t, expectedGroup1Unallocated.
+		Add(CapacityGroupResources(capacityGroups[1])).
+		Add(expectedBufferUnallocated),
 		usage.AllReserved.Unallocated)
 }
 
@@ -133,9 +137,11 @@ func newResourcePoolSnapshotWithOneNodeAndScheduledPods(podCount int) (*resource
 		pods, 0, 0, true), pods
 }
 
-func newCapacityGroupsWithBuffer() (*capacityGroupV1.CapacityGroup, *capacityGroupV1.CapacityGroup, *capacityGroupV1.CapacityGroup) {
-	capacityGroup1 := BasicCapacityGroup("group-1", resourcepool.PoolNameIntegration, capacityGroupShape, 6)
-	capacityGroup2 := BasicCapacityGroup("group2", resourcepool.PoolNameIntegration, capacityGroupShape, 6)
-	buffer := BasicCapacityGroup(integrationBuffer, resourcepool.PoolNameIntegration, bufferShape, 1)
-	return capacityGroup1, capacityGroup2, buffer
+func newCapacityGroupsWithBuffer() (*capacityGroupV1.CapacityGroup, *capacityGroupV1.CapacityGroup,
+	*capacityGroupV1.CapacityGroup, *capacityGroupV1.CapacityGroup) {
+	capacityGroup1 := BasicCapacityGroup("group-1", "group_1", resourcepool.PoolNameIntegration, capacityGroupShape, 6)
+	capacityGroup2 := BasicCapacityGroup("group2", "group2", resourcepool.PoolNameIntegration, capacityGroupShape, 6)
+	capacityGroup3 := BasicCapacityGroup("group-3", "group-3", resourcepool.PoolNameIntegration, capacityGroupShape, 6)
+	buffer := BasicCapacityGroup(integrationBuffer, integrationBuffer, resourcepool.PoolNameIntegration, bufferShape, 1)
+	return capacityGroup1, capacityGroup2, capacityGroup3, buffer
 }

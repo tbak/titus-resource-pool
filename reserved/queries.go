@@ -8,10 +8,3 @@ import (
 func CapacityGroupResources(c *capacityGroupV1.CapacityGroup) poolV1.ComputeResource {
 	return c.Spec.ComputeResource.Multiply(int64(c.Spec.InstanceCount))
 }
-
-func GetNormalizedCapacityGroupName(c *capacityGroupV1.CapacityGroup) string {
-	if original, ok := c.ObjectMeta.Annotations["capacitygroup.com.netflix.titus/original-name"]; ok {
-		return original
-	}
-	return c.ObjectMeta.Name
-}

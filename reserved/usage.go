@@ -5,6 +5,7 @@ import (
 	poolV1 "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	poolPod "github.com/Netflix/titus-resource-pool/pod"
 	"github.com/Netflix/titus-resource-pool/resourcepool"
+	poolUtil "github.com/Netflix/titus-resource-pool/util"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -71,7 +72,7 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 		if reservation.Spec.ResourcePoolName == snapshot.ResourcePoolName {
 			if reservation.Name != bufferName {
 				usage, overallocatedPods := buildUsage(snapshot, reservation)
-				reservationName := GetNormalizedCapacityGroupName(reservation)
+				reservationName := poolUtil.GetNormalizedCapacityGroupName(reservation)
 				inCapacityGroup[reservationName] = usage
 
 				allReserved.Allocated = allReserved.Allocated.Add(usage.Allocated)
@@ -122,7 +123,7 @@ func buildUsage(snapshot *resourcepool.ResourceSnapshot, reservation *capacityGr
 	overAllocated := poolV1.ComputeResource{}
 	overAllocationPods := []*v1.Pod{}
 	for _, pod := range snapshot.PodSnapshot.ScheduledByName {
-		if poolPod.IsPodInCapacityGroup(pod, reservation.Name) {
+		if poolPod.IsPodInCapacityGroup(pod, reservation) {
 			podResources := poolPod.FromPodToComputeResource(pod)
 			nextAllocated := allocated.Add(podResources)
 			if nextAllocated != reservedResources && !nextAllocated.LessThan(reservedResources) {

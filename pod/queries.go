@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 
+	v1 "github.com/Netflix/titus-controllers-api/api/capacitygroup/v1"
+
 	k8sCore "k8s.io/api/core/v1"
 
 	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
@@ -84,11 +86,11 @@ func FindPodCapacityGroup(pod *k8sCore.Pod) string {
 	if assigned, ok = poolUtil.FindLabel(pod.Labels, commonPod.LabelKeyCapacityGroup); !ok {
 		assigned, _ = poolUtil.FindLabel(pod.Annotations, commonPod.LabelKeyCapacityGroup)
 	}
-	return strings.ReplaceAll(assigned, "_", "-")
+	return assigned
 }
 
-func IsPodInCapacityGroup(pod *k8sCore.Pod, capacityGroupName string) bool {
-	return FindPodCapacityGroup(pod) == capacityGroupName
+func IsPodInCapacityGroup(pod *k8sCore.Pod, cg *v1.CapacityGroup) bool {
+	return FindPodCapacityGroup(pod) == poolUtil.GetNormalizedCapacityGroupName(cg)
 }
 
 func IsPodWaitingToBeScheduled(pod *k8sCore.Pod) bool {
