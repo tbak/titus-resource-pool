@@ -36,7 +36,7 @@ var (
 	// Compute resource elementary units used in the integration tests. All actual resource dimensions (pools, nodes,
 	// pods, etc) are defined as multiplication of those here.
 
-	// Proportional resoure allocation accross all dimensions (excluding GPU which is a special case).
+	// Proportional resoure allocation across all dimensions (excluding GPU which is a special case).
 	ComputeResourcesUnitProportional = titusPool.ComputeResource{
 		CPU:         1,
 		GPU:         0,

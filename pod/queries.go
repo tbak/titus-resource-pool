@@ -171,7 +171,6 @@ func FindPodsWithPrimaryResourcePool(resourcePool string, pods []*k8sCore.Pod) [
 // TODO remove
 func PodBelongsToResourcePool(pod *k8sCore.Pod, assignedPools []string, resourcePool string,
 	resourcePoolWithGpus bool, nodes map[string]*k8sCore.Node) bool {
-
 	if len(assignedPools) == 0 {
 		return false
 	}
