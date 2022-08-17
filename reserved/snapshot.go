@@ -5,8 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	poolUtil "github.com/Netflix/titus-resource-pool/util"
-
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	capacityGroupV1 "github.com/Netflix/titus-controllers-api/api/capacitygroup/v1"
@@ -69,7 +67,7 @@ func (snapshot *CapacityGroupSnapshot) updateCapacityGroupData(capacityGroups []
 	for _, capacityGroup := range capacityGroups {
 		capacityGroupByResourcePool[capacityGroup.Spec.ResourcePoolName] = append(
 			capacityGroupByResourcePool[capacityGroup.Spec.ResourcePoolName], capacityGroup)
-		capacityGroupsByName[poolUtil.GetNormalizedCapacityGroupName(capacityGroup)] = capacityGroup
+		capacityGroupsByName[capacityGroup.Spec.CapacityGroupName] = capacityGroup
 	}
 	snapshot.CapacityGroups = capacityGroups
 	snapshot.CapacityGroupsByName = capacityGroupsByName

@@ -53,7 +53,7 @@ func ButPodMachineRequiredAffinity(pod *k8sCore.Pod, machineTypes []string) *k8s
 
 	term := k8sCore.NodeSelectorTerm{
 		MatchExpressions: []k8sCore.NodeSelectorRequirement{
-			k8sCore.NodeSelectorRequirement{
+			{
 				Key:      commonNode.LabelKeyInstanceType,
 				Operator: "In",
 				Values:   machineTypes,
