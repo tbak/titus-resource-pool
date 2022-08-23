@@ -90,7 +90,7 @@ func FindPodCapacityGroup(pod *k8sCore.Pod) string {
 }
 
 func IsPodInCapacityGroup(pod *k8sCore.Pod, cg *v1.CapacityGroup) bool {
-	return FindPodCapacityGroup(pod) == poolUtil.GetNormalizedCapacityGroupName(cg)
+	return FindPodCapacityGroup(pod) == cg.Spec.OriginalName
 }
 
 func IsPodWaitingToBeScheduled(pod *k8sCore.Pod) bool {

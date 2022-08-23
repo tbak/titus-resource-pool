@@ -25,6 +25,7 @@ var (
 				SchedulerName:     PodSchedulerKube,
 				ComputeResource:   util.ComputeResourcesRegular.Multiply(8),
 				InstanceCount:     0,
+				OriginalName:      CapacityGroupNameEmpty,
 			},
 		}
 	}
@@ -32,8 +33,7 @@ var (
 	BasicCapacityGroup = func(name, originalName string, resourcePoolName string, shape v1.ComputeResource, count uint32) *capacityGroupV1.CapacityGroup {
 		return &capacityGroupV1.CapacityGroup{
 			ObjectMeta: metaV1.ObjectMeta{
-				Name:        name,
-				Annotations: map[string]string{"capacitygroup.com.netflix.titus/original-name": originalName},
+				Name: name,
 			},
 			Spec: capacityGroupV1.CapacityGroupSpec{
 				CapacityGroupName: name,
@@ -41,6 +41,7 @@ var (
 				SchedulerName:     PodSchedulerKube,
 				ComputeResource:   shape,
 				InstanceCount:     count,
+				OriginalName:      originalName,
 			},
 		}
 	}
