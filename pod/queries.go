@@ -5,15 +5,14 @@ import (
 	"time"
 
 	v1 "github.com/Netflix/titus-controllers-api/api/capacitygroup/v1"
-
-	k8sCore "k8s.io/api/core/v1"
-
 	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
 	commonNode "github.com/Netflix/titus-kube-common/node"
 	commonPod "github.com/Netflix/titus-kube-common/pod"
 	poolNode "github.com/Netflix/titus-resource-pool/node"
 	poolUtil "github.com/Netflix/titus-resource-pool/util"
 	"github.com/Netflix/titus-resource-pool/util/xcollection"
+	"github.com/google/uuid"
+	k8sCore "k8s.io/api/core/v1"
 )
 
 // TODO Remove when no longer in use
@@ -108,6 +107,50 @@ func IsPodRunning(pod *k8sCore.Pod) bool {
 
 func IsPodFinished(pod *k8sCore.Pod) bool {
 	return pod.Status.Phase == k8sCore.PodSucceeded || pod.Status.Phase == k8sCore.PodFailed
+}
+
+// IsPodPreemptible checks if the pod's priority class is enabled for trough.
+func IsPodPreemptible(pod *k8sCore.Pod) bool {
+	return pod.Spec.PriorityClassName == commonPod.BestEffortEvictablePriority
+}
+
+func GetPreemptedPodIds(pod *k8sCore.Pod) []string {
+	if podIds, ok := pod.Annotations[commonPod.AnnotationKeyPodPreemptedPods]; ok {
+		if podIds == "" {
+			return nil
+		}
+		ids := strings.Split(podIds, ",")
+		var trimmedIds []string
+		for _, id := range ids {
+			trimmed := strings.TrimSpace(id)
+			if _, err := uuid.Parse(trimmed); err == nil {
+				trimmedIds = append(trimmedIds, trimmed)
+			}
+		}
+		return trimmedIds
+	}
+	return nil
+}
+
+func GetPreemptedPodsCount(pod *k8sCore.Pod) int64 {
+	if podIds, ok := pod.Annotations[commonPod.AnnotationKeyPodPreemptedPods]; ok {
+		return int64(strings.Count(podIds, ",") + 1)
+	}
+	return 0
+}
+
+func GetApplicationName(pod *k8sCore.Pod, defaultValue string) string {
+	if value, ok := poolUtil.FindLabel(pod.Annotations, commonPod.AnnotationKeyJobApplicationName); ok {
+		return value
+	}
+	return defaultValue
+}
+
+func GetJobType(pod *k8sCore.Pod, defaultValue string) string {
+	if value, ok := poolUtil.FindLabel(pod.Annotations, commonPod.AnnotationKeyJobType); ok {
+		return value
+	}
+	return defaultValue
 }
 
 func Age(pod *k8sCore.Pod, now time.Time) time.Duration {

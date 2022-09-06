@@ -51,8 +51,8 @@ github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb0
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/Netflix/titus-controllers-api v0.0.21 h1:r5ZjsQ0wx/I4QxbQMGnyhCQCHl7HiUykguA3udWe1MY=
 github.com/Netflix/titus-controllers-api v0.0.21/go.mod h1:BYjAGmw3i62zDMCVxBKFyzA7HYKyvuH9G35XTTv+qRo=
-github.com/Netflix/titus-kube-common v0.34.0 h1:i+YkakUNIxogGsv9O51dMU/iOKtcFcqRRmNMaIcRlqQ=
-github.com/Netflix/titus-kube-common v0.34.0/go.mod h1:Q37Rr8++tA8f2btvo4otdXgDmWOMx/RiS0RoI408jkQ=
+github.com/Netflix/titus-kube-common v0.34.1 h1:PK0ku+LvsUXI6on1XQGNSiXZ9mZkNtq9mDfc740p8tQ=
+github.com/Netflix/titus-kube-common v0.34.1/go.mod h1:Q37Rr8++tA8f2btvo4otdXgDmWOMx/RiS0RoI408jkQ=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tNFfI=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
