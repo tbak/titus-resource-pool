@@ -74,6 +74,7 @@ func (snapshot *CapacityGroupSnapshot) updateCapacityGroupData(capacityGroups []
 	snapshot.capacityGroupByResourcePool = capacityGroupByResourcePool
 }
 
+// filterCapacityGroups takes in a list of cgs and returns only those that are critical and use kubescheduler
 func filterCapacityGroups(cgl capacityGroupV1.CapacityGroupList) []*capacityGroupV1.CapacityGroup {
 	var result []*capacityGroupV1.CapacityGroup
 	for _, cg := range cgl.Items {
@@ -85,19 +86,9 @@ func filterCapacityGroups(cgl capacityGroupV1.CapacityGroupList) []*capacityGrou
 	return result
 }
 
-func getTier(cg *capacityGroupV1.CapacityGroup) string {
-	if cg.Annotations == nil {
-		return critical
-	}
-
-	if val, ok := cg.Annotations["tier"]; ok {
-		return val
-	}
-
-	return critical
-}
-
 func isCritical(cg *capacityGroupV1.CapacityGroup) bool {
-	tier := strings.ToLower(getTier(cg))
-	return tier == critical
+	if cg.Spec.Tier == "" {
+		return true
+	}
+	return strings.ToLower(cg.Spec.Tier) == critical
 }

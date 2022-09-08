@@ -2,3 +2,4 @@
 .gobincache/
 .DS_Store
 *.out
+vendor/

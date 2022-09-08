@@ -26,35 +26,27 @@ func TestFindOwnByResourcePool(t *testing.T) {
 }
 
 func TestFilterCapacityGroups(t *testing.T) {
-	noAnnotationsGroup := NewCapacityGroup("noAnnotation", "noAnnotationPool")
+	noTierGroup := NewCapacityGroup("noTierSpec", "noTierPool")
 
 	criticalKube := NewCapacityGroup("criticalKube", "criticalKubePool")
-	criticalKube.Annotations = map[string]string{
-		"tier": "Critical",
-	}
+	criticalKube.Spec.Tier = "Critical"
 	criticalKube.Spec.SchedulerName = PodSchedulerKube
 
 	criticalFenzo := NewCapacityGroup("criticalFenzo", "criticalFenzoPool")
-	criticalKube.Annotations = map[string]string{
-		"tier": "Critical",
-	}
+	criticalKube.Spec.Tier = "Critical"
 	criticalFenzo.Spec.SchedulerName = PodSchedulerFenzo
 
 	flexKube := NewCapacityGroup("flexKube", "flexKubePool")
-	flexKube.Annotations = map[string]string{
-		"tier": "Flex",
-	}
+	flexKube.Spec.Tier = "Flex"
 	flexKube.Spec.SchedulerName = PodSchedulerKube
 
 	flexFenzo := NewCapacityGroup("flexFenzo", "flexFenzoPool")
-	flexFenzo.Annotations = map[string]string{
-		"tier": "Flex",
-	}
+	flexFenzo.Spec.Tier = "Flex"
 	flexKube.Spec.SchedulerName = PodSchedulerFenzo
 
 	cgList := capacityGroupV1.CapacityGroupList{
 		Items: []capacityGroupV1.CapacityGroup{
-			*noAnnotationsGroup,
+			*noTierGroup,
 			*criticalKube,
 			*criticalFenzo,
 			*flexKube,
@@ -65,6 +57,6 @@ func TestFilterCapacityGroups(t *testing.T) {
 	// Expect only critical tier with kubescheduler CGs
 	filteredCGs := filterCapacityGroups(cgList)
 	require.Len(t, filteredCGs, 2)
-	require.Equal(t, noAnnotationsGroup.Name, filteredCGs[0].Name)
+	require.Equal(t, noTierGroup.Name, filteredCGs[0].Name)
 	require.Equal(t, criticalKube.Name, filteredCGs[1].Name)
 }
