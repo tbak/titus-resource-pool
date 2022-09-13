@@ -21,6 +21,8 @@ type CapacityReservationUsage struct {
 	// Buffer capacity group name
 	Buffer                         Usage
 	BufferAllocatedByCapacityGroup map[string]poolV1.ComputeResource
+	// Trough
+	TroughUsedReservedUnallocated poolV1.ComputeResource
 	// Elastic
 	Elastic                         Usage
 	ElasticAllocatedByCapacityGroup map[string]poolV1.ComputeResource
@@ -99,6 +101,8 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 		allReserved.OverAllocation = totalBufferOverallocation
 	}
 
+	troughUsedReservedUnallocated := buildTroughUsage(snapshot)
+
 	totalElastic := resourcePool.ResourceShape.Multiply(resourcePool.ResourceCount).
 		SubWithLimit(allReserved.Allocated.Add(allReserved.Unallocated), 0)
 	elasticUsage := Usage{
@@ -110,6 +114,7 @@ func NewCapacityReservationUsage(snapshot *resourcepool.ResourceSnapshot,
 		InCapacityGroup:                 inCapacityGroup,
 		Buffer:                          bufferUsage,
 		BufferAllocatedByCapacityGroup:  bufferAllocatedByCapacityGroup,
+		TroughUsedReservedUnallocated:   troughUsedReservedUnallocated,
 		Elastic:                         elasticUsage,
 		ElasticAllocatedByCapacityGroup: elasticAllocatedByCapacityGroup,
 		AllReserved:                     allReserved,
@@ -122,7 +127,7 @@ func buildUsage(snapshot *resourcepool.ResourceSnapshot, reservation *capacityGr
 	overAllocated := poolV1.ComputeResource{}
 	overAllocationPods := []*v1.Pod{}
 	for _, pod := range snapshot.PodSnapshot.ScheduledByName {
-		if poolPod.IsPodInCapacityGroup(pod, reservation) {
+		if !poolPod.IsPodPreemptible(pod) && poolPod.IsPodInCapacityGroup(pod, reservation) {
 			podResources := poolPod.FromPodToComputeResource(pod)
 			nextAllocated := allocated.Add(podResources)
 			if nextAllocated != reservedResources && !nextAllocated.LessThan(reservedResources) {
@@ -157,4 +162,14 @@ func buildBufferAndElasticUsage(remainingBuffer poolV1.ComputeResource,
 		}
 	}
 	return bufferAllocated, bufferOverallocation, elasticAllocated
+}
+
+func buildTroughUsage(snapshot *resourcepool.ResourceSnapshot) poolV1.ComputeResource {
+	sum := poolV1.Zero
+	for _, pod := range snapshot.PodSnapshot.ScheduledByName {
+		if poolPod.IsPodPreemptible(pod) {
+			sum = sum.Add(poolPod.FromPodToComputeResource(pod))
+		}
+	}
+	return sum
 }
