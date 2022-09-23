@@ -310,7 +310,3 @@ func SumPodResources(pods []*k8sCore.Pod) poolApi.ComputeResource {
 	}
 	return sum
 }
-
-func IsPodEvictable(pod *k8sCore.Pod) bool {
-	return pod.Spec.PriorityClassName == commonPod.BestEffortEvictablePriority
-}
