@@ -155,6 +155,11 @@ func IsNodeRemovable(node *k8sCore.Node) bool {
 	return ok
 }
 
+func IsNodeUnremovable(node *k8sCore.Node) bool {
+	_, ok := poolUtil.FindLabel(node.Labels, commonNode.LabelKeyUnremovable)
+	return ok
+}
+
 // TODO There is no obvious way to determine if a node object corresponds to an existing node instance.
 // We trust here that node GC or node graceful shutdown deal with it quickly enough.
 func IsNodeTerminated(node *k8sCore.Node) bool {
