@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/Netflix/titus-controllers-api v0.0.23
-	github.com/Netflix/titus-kube-common v0.38.0
+	github.com/Netflix/titus-kube-common v0.38.3
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.1.2
 	github.com/prometheus/client_golang v1.12.2

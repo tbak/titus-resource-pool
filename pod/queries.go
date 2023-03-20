@@ -1,6 +1,7 @@
 package pod
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -309,4 +310,14 @@ func SumPodResources(pods []*k8sCore.Pod) poolApi.ComputeResource {
 		sum = sum.Add(FromPodToComputeResource(pod))
 	}
 	return sum
+}
+
+func GetScheduledTroughName(pod *k8sCore.Pod) (string, error) {
+	if IsPodPreemptible(pod) && commonPod.IsScheduledInTrough(pod) {
+		tn, exists := pod.Annotations[commonPod.AnnotationKeyPodScheduledTroughName]
+		if exists {
+			return tn, nil
+		}
+	}
+	return "", errors.New("not_scheduled_in_trough")
 }

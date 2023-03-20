@@ -37,6 +37,8 @@ github.com/Netflix/titus-controllers-api v0.0.23 h1:wE1FzJPeCud+Cw3FCsTXp6BjxFbw
 github.com/Netflix/titus-controllers-api v0.0.23/go.mod h1:WpAZyfjnXMcDqQJskvNnYHJL8ZAHgqgWR72lHyBNh78=
 github.com/Netflix/titus-kube-common v0.38.0 h1:UM/VNVgdy22/tEmLcCx6Y7EwnoSBeYh06ncXAffo5FQ=
 github.com/Netflix/titus-kube-common v0.38.0/go.mod h1:TwTd9bq05om7VeUclyrXw+lRY2tJAI51V2lG9toEV7g=
+github.com/Netflix/titus-kube-common v0.38.3 h1:uEOTEh5z9eO10Gv9yfHTzQ00h+FXrMzKJBjO/qXqp2o=
+github.com/Netflix/titus-kube-common v0.38.3/go.mod h1:TwTd9bq05om7VeUclyrXw+lRY2tJAI51V2lG9toEV7g=
 github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tNFfI=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 h1:d+Bc7a5rLufV/sSk/8dngufqelfh6jnri85riMAaF/M=
