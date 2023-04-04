@@ -8,7 +8,7 @@ import (
 
 	machineTypeV1 "github.com/Netflix/titus-controllers-api/api/machinetype/v1"
 	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
-	commonNode "github.com/Netflix/titus-kube-common/node"
+	commonNode "stash.corp.netflix.com/tn/titus-kube-common/node"
 	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 
