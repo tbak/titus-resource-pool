@@ -6,8 +6,8 @@ import (
 	k8sCore "k8s.io/api/core/v1"
 
 	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
-	commonNode "github.com/Netflix/titus-kube-common/node"
-	commonPod "github.com/Netflix/titus-kube-common/pod"
+	commonNode "stash.corp.netflix.com/tn/titus-kube-common/node"
+	commonPod "stash.corp.netflix.com/tn/titus-kube-common/pod"
 	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 

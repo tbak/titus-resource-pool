@@ -6,7 +6,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	commonNode "github.com/Netflix/titus-kube-common/node"
+	commonNode "stash.corp.netflix.com/tn/titus-kube-common/node"
 	poolUtil "github.com/Netflix/titus-resource-pool/util"
 )
 

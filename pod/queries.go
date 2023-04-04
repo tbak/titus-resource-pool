@@ -7,8 +7,8 @@ import (
 
 	v1 "github.com/Netflix/titus-controllers-api/api/capacitygroup/v1"
 	poolApi "github.com/Netflix/titus-controllers-api/api/resourcepool/v1"
-	commonNode "github.com/Netflix/titus-kube-common/node"
-	commonPod "github.com/Netflix/titus-kube-common/pod"
+	commonNode "stash.corp.netflix.com/tn/titus-kube-common/node"
+	commonPod "stash.corp.netflix.com/tn/titus-kube-common/pod"
 	poolNode "github.com/Netflix/titus-resource-pool/node"
 	poolUtil "github.com/Netflix/titus-resource-pool/util"
 	"github.com/Netflix/titus-resource-pool/util/xcollection"

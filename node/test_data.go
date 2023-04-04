@@ -8,7 +8,7 @@ import (
 	coreV1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/Netflix/titus-kube-common/node"
+	"stash.corp.netflix.com/tn/titus-kube-common/node"
 	"github.com/Netflix/titus-resource-pool/machine"
 	"github.com/Netflix/titus-resource-pool/util"
 
