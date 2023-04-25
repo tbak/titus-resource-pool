@@ -3,7 +3,7 @@ module github.com/Netflix/titus-resource-pool
 go 1.19
 
 require (
-	github.com/Netflix/titus-controllers-api v0.0.24
+	github.com/Netflix/titus-controllers-api v0.0.26
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.1.2
 	github.com/prometheus/client_golang v1.12.2

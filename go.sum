@@ -39,6 +39,8 @@ github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3Q
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Netflix/titus-controllers-api v0.0.24 h1:XUtz0/lwYaRPuJRKitGuoP5jSpweK7QgB0um7UvArAA=
 github.com/Netflix/titus-controllers-api v0.0.24/go.mod h1:WpAZyfjnXMcDqQJskvNnYHJL8ZAHgqgWR72lHyBNh78=
+github.com/Netflix/titus-controllers-api v0.0.26 h1:HK4Z3u+kV/BAf1F4sraWTczKPUew4tw8anzL2D19MfA=
+github.com/Netflix/titus-controllers-api v0.0.26/go.mod h1:WpAZyfjnXMcDqQJskvNnYHJL8ZAHgqgWR72lHyBNh78=
 github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tNFfI=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 h1:d+Bc7a5rLufV/sSk/8dngufqelfh6jnri85riMAaF/M=
